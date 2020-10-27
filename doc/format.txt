@@ -1,0 +1,225 @@
+*format.txt*                  Format the current buffer with external commands
+
+
+Author: Lukas Reineke <lukas.reineke@protonmail.com>
+Version: 1.0.0
+
+==============================================================================
+CONTENTS                                                              *format*
+
+  1. Introduction                          |format-introduction|
+  2. Setup                                 |format-setup|
+  3. Variables                             |format-variables|
+  4. Commands                              |format-commands|
+  5. Changelog                             |format-changelog|
+  6. License                               |format-license|
+
+==============================================================================
+ 1. INTRODUCTION                               *format-introduction*
+
+format.nvim applies formatting to the current buffer.
+
+Main goals
+1. fast
+2. async
+3. no magic
+
+------------------------------------------------------------------------------
+
+Details
+
+format.nvim is a lua plugin and only works in Neovim.
+
+It writes the buffer content into a temporary file, runs user defined commands
+on that file, then writes the content back into the buffer.
+
+Everything happens asynchronously.
+
+There is no hidden configuration to resolve executables. The commands are run as
+is. If you need a specific executable, define the path in the command.
+
+By defalt unsaved changes will not be overwritten, so `Format` and `FormatWrite`
+are save to call anytime.
+
+------------------------------------------------------------------------------
+
+Embedded syntax blocks
+
+format.nvim supports formatting embedded blocks of code with different
+command than the current filetype. For example `lua << EOF` blocks in
+vimscript, or code blocks in markdown.
+
+==============================================================================
+ 3. SETUP                                                       *format-setup*
+
+To setup formatting, call the `setup` function.
+`lua require "format".setup {}`
+
+The setup table is a list of |filetypes|, each with a list of format tables.
+`*` can be used as a filetype wildcard.
+ >
+    require "format".setup {
+        lua = {
+            {cmd = {"luafmt -w replace"}}
+        }
+    }
+
+One format table can have following keys
+
+    cmd:                                                                     ~
+        Table of either command strings or functions that get the temporary
+        file path as argument and need to return a command string
+        The commands will be run in sequence
+    start_pattern:                                                           ~
+        Regex to define a pattern where an embedded syntax block starts
+        The whole file is formatted when left empty
+    end_pattern:                                                             ~
+        Regex to define a pattern where an embedded syntax block ends
+        The whole file is formatted when left empty
+    tempfile_prefix:                                                         ~
+        String to prepend to the temporary file
+        Defaults to "~formatting"
+    tempfile_postfix:                                                        ~
+        String to append to the temporary file
+        Defaults to ""
+    target:                                                                  ~
+        Either "all" or "current"
+        When "current", the plugin only formats embedded syntax blocks when the
+        cursor is in them.
+        When "all" the plugin formats all embedded syntax blocks in the buffer.
+        Defaults to "all"
+
+Example configuration >
+
+    require "format".setup {
+        ["*"] = {
+            {cmd = {"sed -i 's/[ \t]*$//'"}} -- remove trailing whitespace
+        },
+        vim = {
+            {
+                cmd = {"luafmt -w replace"},
+                start_pattern = "^lua << EOF$",
+                end_pattern = "^EOF$"
+            }
+        },
+        vimwiki = {
+            {
+                cmd = {"prettier -w --parser babel"},
+                start_pattern = "^{{{javascript$",
+                end_pattern = "^}}}$"
+            }
+        },
+        lua = {
+            {
+                cmd = {
+                    function(file)
+                        return string.format("luafmt -l %s -w replace %s", vim.bo.textwidth, file)
+                    end
+                }
+            }
+        },
+        go = {
+            {
+                cmd = {"gofmt -w", "goimports -w"},
+                tempfile_postfix = ".tmp"
+            }
+        },
+        javascript = {
+            {cmd = {"prettier -w", "./node_modules/.bin/eslint --fix"}}
+        },
+        markdown = {
+            {cmd = {"prettier -w"}},
+            {
+                cmd = {"black"},
+                start_pattern = "^```python$",
+                end_pattern = "^```$",
+                target = "current"
+            }
+        }
+    }
+
+
+==============================================================================
+ 3. VARIABLES                                               *format-variables*
+
+g:format_debug                                                *g:format_debug*
+
+    Turns on logging.
+
+    Default: v:false                                                         ~
+
+    Example: >
+
+        let g:format_debug = v:true
+
+==============================================================================
+ 4. COMMANDS                                                 *format-commands*
+
+Format                                                                *Format*
+
+    Formats the current buffer.
+
+    Bang:
+        By default |Format| will not overwrite unsaved changes.
+        Running it with a bang `:Format!` will overwrite changes.
+
+    Range:
+        |Format| takes a range to apply the formatting to.
+        By default it is run on the whole file.
+
+    Example: >
+
+        autocmd BufWritePre * Format
+
+------------------------------------------------------------------------------
+FormatWrite                                                      *FormatWrite*
+
+    Formats the current buffer like |Format|. Then calls |:update| to save the
+    changes if there are any.
+
+    Bang:
+        By default |FormatWrite| will not overwrite unsaved changes.
+        Running it with a bang `:FormatWrite!` will overwrite changes.
+
+    Range:
+        |FormatWrite| takes a range to apply the formatting to.
+        By default it is run on the whole file.
+
+    Example: >
+
+        autocmd BufWritePre * FormatWrite
+
+==============================================================================
+ 5. CHANGELOG                                               *format-changelog*
+
+1.0.0
+  * First release
+
+==============================================================================
+ 6. LICENSE                                                   *format-license*
+
+The MIT Licence
+http://www.opensource.org/licenses/mit-license.php
+
+Copyright (c) 2020 Lukas Reineke
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl

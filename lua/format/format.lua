@@ -8,9 +8,9 @@ function expand_cmd(cmd, tempfile_name)
     return string.format("%s %s", cmd, tempfile_name)
 end
 
-function M.format(formatter, options, callback)
+function M.format(cmd, options, callback)
     options.startline = options.startline - 1
-    formatter = {unpack(formatter)}
+    cmd = {unpack(cmd)}
 
     local bufname = vim.fn.bufname(options.bufnr)
     local lines = vim.api.nvim_buf_get_lines(options.bufnr, options.startline, options.endline, true)
@@ -72,8 +72,8 @@ function M.format(formatter, options, callback)
             print(string.format("Format event %s: %s %s", job_id, event, vim.inspect(data)))
         end
         if event == "exit" then
-            if #formatter > 0 then
-                F.run_job(table.remove(formatter, 1))
+            if #cmd > 0 then
+                F.run_job(table.remove(cmd, 1))
             else
                 F.done()
             end
@@ -98,7 +98,7 @@ function M.format(formatter, options, callback)
         end
     end
 
-    return F.run_job(table.remove(formatter, 1))
+    return F.run_job(table.remove(cmd, 1))
 end
 
 return M

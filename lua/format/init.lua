@@ -38,8 +38,10 @@ function M.format(bang, write, startline, endline)
                     undojoin = undojoin
                 }
 
-                if current.start_pattern == nil or current.end_pattern == nil then
-                    format(current.formatter, options, step)
+                if current.cmd == nil then
+                    step()
+                elseif current.start_pattern == nil or current.end_pattern == nil then
+                    format(current.cmd, options, step)
                 elseif current.target ~= "current" then
                     embedded.format_all_embedded(current, options, 1, step)
                 else

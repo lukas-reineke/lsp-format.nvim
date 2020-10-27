@@ -24,7 +24,7 @@ function M.format_all_embedded(current, options, line, step)
         M.format_all_embedded(current, options, options.endline, step)
     end
 
-    format(current.formatter, options, callback)
+    format(current.cmd, options, callback)
 
     vim.fn.winrestview(view)
 end
@@ -42,7 +42,7 @@ function M.format_embedded(current, options, step)
     options.startline = startline + 1
     options.endline = endline - 1
 
-    format(current.formatter, options, step)
+    format(current.cmd, options, step)
 end
 
 return M

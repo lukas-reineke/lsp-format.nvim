@@ -11,21 +11,21 @@ function M.undojoin()
 end
 
 function M.merge_config(input_config)
-    local base_formatter = {}
+    local base_cmd = {}
     local base_tempfile_postfix
     local base_tempfile_prefix
     local config = {}
 
     for _, c in pairs(input_config) do
         for _, v in pairs(c) do
-            if v.formatter == nil or #v.formatter == 0 then
+            if v.cmd == nil or #v.cmd == 0 then
                 goto continue
             end
             if v.start_pattern ~= nil and v.end_pattern ~= nil then
                 table.insert(config, v)
             else
-                for _, fv in pairs(v.formatter) do
-                    table.insert(base_formatter, fv)
+                for _, fv in pairs(v.cmd) do
+                    table.insert(base_cmd, fv)
                 end
                 if v.tempfile_postfix ~= nil then
                     base_tempfile_postfix = v.tempfile_postfix
@@ -39,12 +39,12 @@ function M.merge_config(input_config)
         end
     end
 
-    if #base_formatter > 0 then
+    if #base_cmd > 0 then
         table.insert(
             config,
             1,
             {
-                formatter = base_formatter,
+                cmd = base_cmd,
                 tempfile_prefix = base_tempfile_prefix,
                 tempfile_postfix = base_tempfile_postfix
             }
