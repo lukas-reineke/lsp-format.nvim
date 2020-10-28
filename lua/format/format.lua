@@ -17,7 +17,7 @@ function M.format(cmd, options, callback)
     local split_bufname = vim.split(bufname, "/")
     local tempfile_prefix = options.tempfile_prefix or "~formatting"
     local tempfile_postfix = options.tempfile_postfix or ""
-    split_bufname[#split_bufname] =
+    local filename =
         string.format(
         "%s_%d-%d_%d_%s%s",
         tempfile_prefix,
@@ -27,7 +27,8 @@ function M.format(cmd, options, callback)
         split_bufname[#split_bufname],
         tempfile_postfix
     )
-    local tempfile_name = table.concat(split_bufname, "/")
+    split_bufname[#split_bufname] = nil
+    local tempfile_name = (options.tempfile_dir or table.concat(split_bufname, "/")) .. "/" .. filename
 
     local tempfile = io.open(tempfile_name, "w+")
     for _, line in pairs(lines) do

@@ -35,6 +35,7 @@ function M.format(bang, write, startline, endline)
                     endline = endline,
                     tempfile_postfix = current.tempfile_postfix,
                     tempfile_prefix = current.tempfile_prefix,
+                    tempfile_dir = current.tempfile_dir,
                     undojoin = undojoin
                 }
 

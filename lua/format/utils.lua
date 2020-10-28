@@ -14,6 +14,7 @@ function M.merge_config(input_config)
     local base_cmd = {}
     local base_tempfile_postfix
     local base_tempfile_prefix
+    local base_tempfile_dir
     local config = {}
 
     for _, c in pairs(input_config) do
@@ -33,6 +34,9 @@ function M.merge_config(input_config)
                 if v.tempfile_prefix ~= nil then
                     base_tempfile_prefix = v.tempfile_prefix
                 end
+                if v.tempfile_dir ~= nil then
+                    base_tempfile_dir = v.tempfile_dir
+                end
             end
 
             ::continue::
@@ -46,7 +50,8 @@ function M.merge_config(input_config)
             {
                 cmd = base_cmd,
                 tempfile_prefix = base_tempfile_prefix,
-                tempfile_postfix = base_tempfile_postfix
+                tempfile_postfix = base_tempfile_postfix,
+                tempfile_dir = base_tempfile_dir
             }
         )
     end
