@@ -34,8 +34,6 @@ function M.format(cmd, options, callback)
     end
     local tempfile_name = (options.tempfile_dir or tempfile_dir) .. "/" .. filename
 
-    print(tempfile_name)
-
     local tempfile = io.open(tempfile_name, "w+")
     for _, line in pairs(lines) do
         tempfile:write(line)
