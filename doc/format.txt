@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas.reineke@protonmail.com>
-Version: 1.1.0
+Version: 1.1.1
 
 ==============================================================================
 CONTENTS                                                              *format*
@@ -194,6 +194,10 @@ FormatWrite                                                      *FormatWrite*
 
 ==============================================================================
  5. CHANGELOG                                               *format-changelog*
+
+1.1.1
+  * Fixed wrong directory generation when file is in root of path
+    Thanks for the help by @ndreas
 
 1.1.0
   * Added `tempfile_dir` option

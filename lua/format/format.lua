@@ -28,7 +28,13 @@ function M.format(cmd, options, callback)
         tempfile_postfix
     )
     split_bufname[#split_bufname] = nil
-    local tempfile_name = (options.tempfile_dir or table.concat(split_bufname, "/")) .. "/" .. filename
+    local tempfile_dir = table.concat(split_bufname, "/")
+    if tempfile_dir == "" then
+        tempfile_dir = "."
+    end
+    local tempfile_name = (options.tempfile_dir or tempfile_dir) .. "/" .. filename
+
+    print(tempfile_name)
 
     local tempfile = io.open(tempfile_name, "w+")
     for _, line in pairs(lines) do
