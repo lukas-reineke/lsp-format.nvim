@@ -20,8 +20,8 @@ Everything happens asynchronously.
 There is no hidden configuration to resolve executables. The commands are run as
 is. If you need a specific executable, define the path in the command.
 
-By defalt unsaved changes will not be overwritten, so `Format` and `FormatWrite`
-are save to call anytime.
+By default unsaved changes will not be overwritten, so `Format` and `FormatWrite`
+are safe to call anytime.
 
 ## Embedded syntax blocks.
 
