@@ -43,6 +43,11 @@ augroup Format
 augroup END
 ```
 
+Or for Lua based configs:
+```lua
+vim.cmd [[ augroup Format | exe "au BufWritePost * FormatWrite" | augroup END ]]
+```
+
 ## Example configuration
 
 Please see `:help format.txt` for more information on configuration.
