@@ -1,7 +1,7 @@
 local M = {}
 
 function expand_cmd(cmd, tempfile_name)
-    error, result = pcall(cmd, tempfile_name)
+    local error, result = pcall(cmd, tempfile_name)
     if error then
         return result
     end
