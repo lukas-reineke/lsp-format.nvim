@@ -1,6 +1,6 @@
 local M = {}
 
-function expand_cmd(cmd, tempfile_name)
+local function expand_cmd(cmd, tempfile_name)
     local error, result = pcall(cmd, tempfile_name)
     if error then
         return result
@@ -10,15 +10,14 @@ end
 
 function M.format(cmd, options, callback)
     options.startline = options.startline - 1
-    cmd = {unpack(cmd)}
+    cmd = { unpack(cmd) }
 
     local bufname = vim.fn.bufname(options.bufnr)
     local lines = vim.api.nvim_buf_get_lines(options.bufnr, options.startline, options.endline, true)
     local split_bufname = vim.split(bufname, "/")
     local tempfile_prefix = options.tempfile_prefix or "~formatting"
     local tempfile_postfix = options.tempfile_postfix or ""
-    local filename =
-        string.format(
+    local filename = string.format(
         "%s_%d-%d_%d_%s%s",
         tempfile_prefix,
         options.startline,
@@ -37,7 +36,7 @@ function M.format(cmd, options, callback)
     local tempfile = io.open(tempfile_name, "w+")
     for _, line in pairs(lines) do
         tempfile:write(line)
-        tempfile:write("\n")
+        tempfile:write "\n"
     end
     tempfile:flush()
     tempfile:close()
@@ -48,7 +47,7 @@ function M.format(cmd, options, callback)
         local tempfile = io.open(tempfile_name, "r")
         if tempfile == nil then
             if vim.g.format_debug then
-                print("Format error: could not open tempfile")
+                print "Format error: could not open tempfile"
             end
             return
         end
@@ -87,17 +86,13 @@ function M.format(cmd, options, callback)
 
     function F.run_job(cmd)
         local job = expand_cmd(cmd, tempfile_name)
-        local job_id =
-            vim.fn.jobstart(
-            job,
-            {
-                on_stderr = F.on_event,
-                on_stdout = F.on_event,
-                on_exit = F.on_event,
-                stdout_buffered = true,
-                stderr_buffered = true
-            }
-        )
+        local job_id = vim.fn.jobstart(job, {
+            on_stderr = F.on_event,
+            on_stdout = F.on_event,
+            on_exit = F.on_event,
+            stdout_buffered = true,
+            stderr_buffered = true,
+        })
         if vim.g.format_debug then
             print(string.format('Format started job %s: "%s"', job_id, job))
         end

@@ -4,7 +4,7 @@ function M.undojoin()
     local undojoin_count = 0
     return function()
         if undojoin_count > 0 then
-            vim.api.nvim_command("silent! undojoin")
+            vim.api.nvim_command "silent! undojoin"
         end
         undojoin_count = undojoin_count + 1
     end
@@ -44,16 +44,12 @@ function M.merge_config(input_config)
     end
 
     if #base_cmd > 0 then
-        table.insert(
-            config,
-            1,
-            {
-                cmd = base_cmd,
-                tempfile_prefix = base_tempfile_prefix,
-                tempfile_postfix = base_tempfile_postfix,
-                tempfile_dir = base_tempfile_dir
-            }
-        )
+        table.insert(config, 1, {
+            cmd = base_cmd,
+            tempfile_prefix = base_tempfile_prefix,
+            tempfile_postfix = base_tempfile_postfix,
+            tempfile_dir = base_tempfile_dir,
+        })
     end
 
     return config
