@@ -8,6 +8,13 @@ Main goals
 2. async
 3. no magic
 
+# Deprecated
+
+I am no longer actively maintaining this plugin.  
+Instead I recommend to use native LSP formatting with [mattn/efm-langserver](https://github.com/mattn/efm-langserver) or [jose-elias-alvarez/null-ls.nvim](https://github.com/jose-elias-alvarez/null-ls.nvim).
+
+Or for a non-LSP solution, [mhartington/formatter.nvim](https://github.com/mhartington/formatter.nvim) (for which I am also a maintainer)
+
 ## Details
 
 format.nvim is a lua plugin and only works in Neovim.
