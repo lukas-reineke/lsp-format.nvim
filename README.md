@@ -1,109 +1,104 @@
-# Format.nvim
+# LSP-format.nvim
 
-format.nvim applies formatting to the current buffer.
+LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 
-Main goals
+It does
 
-1. fast
-2. async
-3. no magic
+1. Asynchronously formats on save
+2. Adds commands to disable formatting (globally or per filetype)
+3. Makes it easier to send format options to the LSP
 
-# Deprecated
+It does not
 
-I am no longer actively maintaining this plugin.  
-Instead I recommend to use native LSP formatting with [mattn/efm-langserver](https://github.com/mattn/efm-langserver) or [jose-elias-alvarez/null-ls.nvim](https://github.com/jose-elias-alvarez/null-ls.nvim).
+1. _Provide any formatting by itself._ You still need to use an LSP server
 
-Or for a non-LSP solution, [mhartington/formatter.nvim](https://github.com/mhartington/formatter.nvim) (for which I am also a maintainer)
+## Install
 
-## Details
+Use your favourite plugin manager to install.
 
-format.nvim is a lua plugin and only works in Neovim.
+#### Example with Packer
 
-It writes the buffer content into a temporary file, runs user defined commands
-on that file, then writes the content back into the buffer.
+[wbthomason/packer.nvim](https://github.com/wbthomason/packer.nvim)
 
-Everything happens asynchronously.
-
-There is no hidden configuration to resolve executables. The commands are run as
-is. If you need a specific executable, define the path in the command.
-
-By default unsaved changes will not be overwritten, so `Format` and `FormatWrite`
-are safe to call anytime.
-
-## Embedded syntax blocks.
-
-format.nvim supports formatting embedded blocks of code with different
-command than the current filetype. For example `lua << EOF` blocks in
-vimscript, or code blocks in markdown.
-Just specify a start and end-pattern.
-
-## Format on save
-
-There is no format on save functionality build in, the plugin only provides the
-`Format` and `FormatWrite` commands.
-To format on save, you can put this in your `vimrc`
-
-```vimscript
-augroup Format
-    autocmd!
-    autocmd BufWritePost * FormatWrite
-augroup END
+```lua
+-- init.lua
+require("packer").startup(
+    function()
+        use "lukas-reineke/lsp-format.nvim"
+    end
+)
 ```
 
-## Example configuration
+#### Example with Plug
 
-Please see `:help format.txt` for more information on configuration.
+[junegunn/vim-plug](https://github.com/junegunn/vim-plug)
 
-````lua
-require "format".setup {
-    ["*"] = {
-        {cmd = {"sed -i 's/[ \t]*$//'"}} -- remove trailing whitespace
-    },
-    vim = {
-        {
-            cmd = {"luafmt -w replace"},
-            start_pattern = "^lua << EOF$",
-            end_pattern = "^EOF$"
-        }
-    },
-    vimwiki = {
-        {
-            cmd = {"prettier -w --parser babel"},
-            start_pattern = "^{{{javascript$",
-            end_pattern = "^}}}$"
-        }
-    },
-    lua = {
-        {
-            cmd = {
-                function(file)
-                    return string.format("luafmt -l %s -w replace %s", vim.bo.textwidth, file)
-                end
-            }
-        }
-    },
-    go = {
-        {
-            cmd = {"gofmt -w", "goimports -w"},
-            tempfile_postfix = ".tmp"
-        }
-    },
-    javascript = {
-        {cmd = {"prettier -w", "./node_modules/.bin/eslint --fix"}}
-    },
-    markdown = {
-        {cmd = {"prettier -w"}},
-        {
-            cmd = {"black"},
-            start_pattern = "^```python$",
-            end_pattern = "^```$",
-            target = "current"
-        }
-    }
+```vim
+" init.vim
+call plug#begin('~/.vim/plugged')
+Plug 'lukas-reineke/lsp-format.nvim'
+call plug#end()
+```
+
+## Setup
+
+To use LSP-format, you have to run the setup function, and pass the `on_attach` function to each LSP that should use it.
+
+```lua
+require("lsp-format").setup {}
+require "lspconfig".gopls.setup { on_attach = require "lsp-format".on_attach }
+```
+
+or
+
+```lua
+require("lsp-format").setup {}
+
+local on_attach = function(client)
+    require "lsp-format".on_attach(client)
+
+    -- ... custom code ...
+end
+require "lspconfig".gopls.setup { on_attach = on_attach }
+```
+
+## FAQ
+
+### How is it different to `autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_sync()`?
+
+The main difference is that LSP-format.nvim is async. It will format on save, _without blocking the editor_.  
+And it adds some convenience with disable commands and format options.  
+But the end result is the same.
+
+### How do I use format options?
+
+You can pass the format options into the `setup` function, or as arguments to the `:Format` command.  
+How the format options look like depends on the LSP server you are using.
+
+As an example, [mattn/efm-langserver](https://github.com/mattn/efm-langserver) uses `${}` template syntax with which you can
+define your own options `${--flag:lua_variable_name}`.
+
+```lua
+require "lsp-format".setup {
+    typescript = { tab_width = 4 },
+    yaml = { tab_width = 2 },
 }
-````
+local prettier = {
+    formatCommand = [[prettier --stdin-filepath ${INPUT} ${--tab-width:tab_width}]],
+    formatStdin = true,
+}
+require "lspconfig".efm.setup {
+    on_attach = require "lsp-format".on_attach,
+    init_options = { documentFormatting = true },
+    settings = {
+        languages = {
+            typescript = { prettier },
+            yaml = { prettier },
+        },
+    },
+}
+```
 
-## Mentions
+Now Typescript gets formatted with 4 and YAML with 2 spaces by default.  
+And you can run `:Format tab_width=8` to overwrite the setting and format with 8 spaces.
 
-At first this was supposed to be a PR to [mhartington/formatter.nvim](https://github.com/mhartington/formatter.nvim)
-but I ended up rewriting everything.
