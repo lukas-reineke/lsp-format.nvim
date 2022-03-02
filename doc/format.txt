@@ -1,199 +1,84 @@
-*format.txt*                  Format the current buffer with external commands
+*lsp-format.txt*                A wrapper around Neovims native LSP formatting
 
 
-Author: Lukas Reineke <lukas.reineke@protonmail.com>
-Version: 1.1.2
-
-==============================================================================
-CONTENTS                                                              *format*
-
-  1. Introduction                          |format-introduction|
-  2. Setup                                 |format-setup|
-  3. Variables                             |format-variables|
-  4. Commands                              |format-commands|
-  5. Changelog                             |format-changelog|
-  6. License                               |format-license|
+Author: Lukas Reineke <lukas@reineke.jp>
+Version: 2.0.0
 
 ==============================================================================
- 1. INTRODUCTION                               *format-introduction*
+CONTENTS                                                          *lsp-format*
 
-format.nvim applies formatting to the current buffer.
-
-Main goals
-1. fast
-2. async
-3. no magic
-
-------------------------------------------------------------------------------
-
-Details
-
-format.nvim is a lua plugin and only works in Neovim.
-
-It writes the buffer content into a temporary file, runs user defined commands
-on that file, then writes the content back into the buffer.
-
-Everything happens asynchronously.
-
-There is no hidden configuration to resolve executables. The commands are run as
-is. If you need a specific executable, define the path in the command.
-
-By defalt unsaved changes will not be overwritten, so `Format` and `FormatWrite`
-are save to call anytime.
-
-------------------------------------------------------------------------------
-
-Embedded syntax blocks
-
-format.nvim supports formatting embedded blocks of code with different
-command than the current filetype. For example `lua << EOF` blocks in
-vimscript, or code blocks in markdown.
+  1. Introduction                          |lsp-format-introduction|
+  2. Setup                                 |lsp-format-setup|
+  3. Commands                              |lsp-format-commands|
+  4. Changelog                             |lsp-format-changelog|
+  5. License                               |lsp-format-license|
 
 ==============================================================================
- 3. SETUP                                                       *format-setup*
+ 1. INTRODUCTION                                     *lsp-format-introduction*
 
-To setup formatting, call the `setup` function.
-`lua require "format".setup {}`
+LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 
-The setup table is a list of |filetypes|, each with a list of format tables.
-`*` can be used as a filetype wildcard.
+It does
+
+1. Asynchronously formatting on save
+2. Add commands for disabling formatting (globally or per filetype)
+3. Makes it easier to send format options to the LSP
+
+It does not
+
+1. Provide any formatting by itself You still need to use an LSP server
+
+==============================================================================
+ 2. SETUP                                                   *lsp-format-setup*
+
+To use LSP-format, you have to run the setup function, and pass the `on_attach`
+function to each LSP that should use it.
+
+The setup functions takes one optional argument that maps |filetypes| to
+format options.
  >
-    require "format".setup {
+    require "lsp-format".setup {
         lua = {
-            {cmd = {"luafmt -w replace"}}
-        }
+            indent_width = 4,
+        },
     }
 
-One format table can have following keys
-
-    cmd:                                                                     ~
-        Table of either command strings or functions that get the temporary
-        file path as argument and need to return a command string
-        The commands will be run in sequence
-    start_pattern:                                                           ~
-        Regex to define a pattern where an embedded syntax block starts
-        The whole file is formatted when left empty
-    end_pattern:                                                             ~
-        Regex to define a pattern where an embedded syntax block ends
-        The whole file is formatted when left empty
-    tempfile_prefix:                                                         ~
-        String to prepend to the temporary file
-        Defaults to "~formatting"
-    tempfile_postfix:                                                        ~
-        String to append to the temporary file
-        Defaults to ""
-    tempfile_dir:                                                            ~
-        Directory to which the temprorary file is written to
-        Defaults to the same directory as the real file
-    target:                                                                  ~
-        Either "all" or "current"
-        When "current", the plugin only formats embedded syntax blocks when the
-        cursor is in them.
-        When "all" the plugin formats all embedded syntax blocks in the buffer.
-        Defaults to "all"
-
-Example configuration >
-
-    require "format".setup {
-        ["*"] = {
-            {cmd = {"sed -i 's/[ \t]*$//'"}} -- remove trailing whitespace
-        },
-        vim = {
-            {
-                cmd = {"luafmt -w replace"},
-                start_pattern = "^lua << EOF$",
-                end_pattern = "^EOF$"
-            }
-        },
-        vimwiki = {
-            {
-                cmd = {"prettier -w --parser babel"},
-                start_pattern = "^{{{javascript$",
-                end_pattern = "^}}}$"
-            }
-        },
-        lua = {
-            {
-                cmd = {
-                    function(file)
-                        return string.format("luafmt -l %s -w replace %s", vim.bo.textwidth, file)
-                    end
-                }
-            }
-        },
-        go = {
-            {
-                cmd = {"gofmt -w", "goimports -w"},
-                tempfile_postfix = ".tmp"
-            }
-        },
-        javascript = {
-            {cmd = {"prettier -w", "./node_modules/.bin/eslint --fix"}}
-        },
-        markdown = {
-            {cmd = {"prettier -w"}},
-            {
-                cmd = {"black"},
-                start_pattern = "^```python$",
-                end_pattern = "^```$",
-                target = "current"
-            }
-        }
-    }
-
-
 ==============================================================================
- 3. VARIABLES                                               *format-variables*
+ 3. COMMANDS                                             *lsp-format-commands*
 
-g:format_debug                                                *g:format_debug*
+:Format [{format_options}]                                            *Format*
 
-    Turns on logging.
-
-    Default: v:false                                                         ~
-
-    Example: >
-
-        let g:format_debug = v:true
-
-==============================================================================
- 4. COMMANDS                                                 *format-commands*
-
-Format                                                                *Format*
-
-    Formats the current buffer.
-
-    Bang:
-        By default |Format| will not overwrite unsaved changes.
-        Running it with a bang `:Format!` will overwrite changes.
-
-    Range:
-        |Format| takes a range to apply the formatting to.
-        By default it is run on the whole file.
-
-    Example: >
-
-        autocmd BufWritePre * Format
+    Formats and saves the current buffer.
+    Optional takes format options separated by space.
+    Format options can be a key value pair separated by `=` `hello=world`, or
+    just a value `foobar`
+ >
+    :Format indent_width=2 no_call_parentheses
 
 ------------------------------------------------------------------------------
-FormatWrite                                                      *FormatWrite*
+:FormatDisable [{filetype}]                                    *FormatDisable*
 
-    Formats the current buffer like |Format|. Then calls |:update| to save the
-    changes if there are any.
+    Disables formatting.
+    If no filetype is given, it disables formatting globally.
 
-    Bang:
-        By default |FormatWrite| will not overwrite unsaved changes.
-        Running it with a bang `:FormatWrite!` will overwrite changes.
+------------------------------------------------------------------------------
+:FormatEnable[!] [{filetype}]                                   *FormatEnable*
 
-    Range:
-        |FormatWrite| takes a range to apply the formatting to.
-        By default it is run on the whole file.
+    Enables formatting.
+    If no filetype is given, it enables formatting globally.
+    If called with bang, it clears all disalbed filetypes as well.
 
-    Example: >
+------------------------------------------------------------------------------
+:FormatToggle [{filetype}]                                      *FormatToggle*
 
-        autocmd BufWritePre * FormatWrite
+    Toggles between formatting enabled and disabled.
+    If no filetype is given, it uses the global state.
 
 ==============================================================================
- 5. CHANGELOG                                               *format-changelog*
+ 4. CHANGELOG                                           *lsp-format-changelog*
+
+2.0.0
+  * Removed formatting from the plugin itself, and use LSP instead.
 
 1.1.2
   * Removed debug print
@@ -209,12 +94,12 @@ FormatWrite                                                      *FormatWrite*
   * First release
 
 ==============================================================================
- 6. LICENSE                                                   *format-license*
+ 5. LICENSE                                               *lsp-format-license*
 
 The MIT Licence
 http://www.opensource.org/licenses/mit-license.php
 
-Copyright (c) 2020 Lukas Reineke
+Copyright (c) 2022 Lukas Reineke
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
