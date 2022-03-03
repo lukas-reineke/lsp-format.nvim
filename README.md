@@ -62,6 +62,27 @@ end
 require "lspconfig".gopls.setup { on_attach = on_attach }
 ```
 
+That's it, saving a buffer will format it now.
+
+## Notes
+
+#### Make sure you remove any old format on save code
+
+You don't want to run formatting twice. If you had setup formatting on save before, remove it.  
+You can check if something is listening on buffer write events with `:autocmd BufWritePre` and `:autocmd BufWritePost`
+
+#### `:wq` will not format
+
+Because formatting is async now, you can't save and quit in the same command. The formatting results will not get back
+in time and Neovim will close without applying the changes.  
+In this case you need to use `vim.lsp.buf.formatting_sync()`
+
+Add this abbreviation into your dotfiles to do the right thing when doing `:wq`
+
+```lua
+vim.cmd [[cabbrev wq execute "lua vim.lsp.buf.formatting_sync()" <bar> wq]]
+```
+
 ## FAQ
 
 ### How is it different to `autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_sync()`?
