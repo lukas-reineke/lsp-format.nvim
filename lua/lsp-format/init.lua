@@ -2,6 +2,7 @@ local M = {
     format_options = {},
     disabled = false,
     disabled_filetypes = {},
+    queue = {},
 }
 
 M.setup = function(format_options)
@@ -31,20 +32,61 @@ M.setup = function(format_options)
                 vim.b.format_saving = true
                 vim.cmd [[update]]
                 vim.b.format_saving = false
+                M._next()
             end
         end
     end
 end
 
 M.format = function(format_options_string)
-    local format_options = {}
-    for _, option in ipairs(vim.split(format_options_string or "", " ")) do
-        local key, value = unpack(vim.split(option, "="))
-        format_options[key] = value or true
-    end
     if not vim.b.format_saving and not M.disabled and not M.disabled_filetypes[vim.bo.filetype] then
-        vim.b.format_changedtick = vim.b.changedtick
-        vim.lsp.buf.formatting((format_options_string and format_options) or M.format_options[vim.bo.filetype] or {})
+        local bufnr = vim.api.nvim_get_current_buf()
+        local clients = vim.tbl_values(vim.lsp.buf_get_clients())
+        for i, client in pairs(clients) do
+            if not client.resolved_capabilities.document_formatting then
+                table.remove(clients, i)
+            end
+        end
+
+        local format_options = M.format_options[vim.bo.filetype] or {}
+        for _, option in ipairs(vim.split(format_options_string or "", " ")) do
+            local key, value = unpack(vim.split(option, "="))
+            if key == "order" then
+                value = vim.split(value, ",")
+            end
+            format_options[key] = value or true
+        end
+
+        for _, client_name in pairs(format_options.order or {}) do
+            for i, client in pairs(clients) do
+                if client.name == client_name then
+                    table.insert(clients, table.remove(clients, i))
+                    break
+                end
+            end
+        end
+
+        table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options })
+
+        M._next()
+    end
+end
+
+M._format = function(bufnr, client, format_options)
+    vim.b.format_changedtick = vim.b.changedtick
+    local params = vim.lsp.util.make_formatting_params(format_options)
+    client.request("textDocument/formatting", params, nil, bufnr)
+end
+
+M._next = function()
+    local next = M.queue[1]
+    if not next or #next.clients == 0 then
+        return
+    end
+    local next_client = table.remove(next.clients, 1)
+    M._format(next.bufnr, next_client, next.format_options)
+    if #next.clients == 0 then
+        table.remove(M.queue, 1)
     end
 end
 

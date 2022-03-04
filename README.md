@@ -4,9 +4,10 @@ LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 
 It does
 
-1. Asynchronously formats on save
-2. Adds commands to disable formatting (globally or per filetype)
-3. Makes it easier to send format options to the LSP
+1. Asynchronously formatting on save
+2. Sequentially formatting with all attached LSP server
+3. Add commands for disabling formatting (globally or per filetype)
+4. Makes it easier to send format options to the LSP
 
 It does not
 
@@ -75,13 +76,17 @@ You can check if something is listening on buffer write events with `:autocmd Bu
 
 Because formatting is async now, you can't save and quit in the same command. The formatting results will not get back
 in time and Neovim will close without applying the changes.  
-In this case you need to use `vim.lsp.buf.formatting_sync()`
+In this case you need to use `vim.lsp.buf.formatting_seq_sync()`
 
 Add this abbreviation into your dotfiles to do the right thing when doing `:wq`
 
 ```lua
-vim.cmd [[cabbrev wq execute "lua vim.lsp.buf.formatting_sync()" <bar> wq]]
+vim.cmd [[cabbrev wq execute "lua vim.lsp.buf.formatting_seq_sync()" <bar> wq]]
 ```
+
+#### `order` format option
+
+`order` is a special format option that determines the order formatting is requested from the LSP server.
 
 ## FAQ
 
@@ -123,3 +128,15 @@ require "lspconfig".efm.setup {
 Now Typescript gets formatted with 4 and YAML with 2 spaces by default.  
 And you can run `:Format tab_width=8` to overwrite the setting and format with 8 spaces.
 
+### How do I exclude an LSP server from formatting?
+
+To exclude a server, you have to set the clients `resolved_capabilities.document_formatting` to false.  
+Do this in the attach function, before you call `require "lsp-format".on_attach(client)`
+
+```lua
+local on_attach = function(client)
+    client.resolved_capabilities.document_formatting = false
+    require "lsp-format".on_attach(client)
+end
+require "lspconfig".gopls.setup { on_attach = on_attach }
+```

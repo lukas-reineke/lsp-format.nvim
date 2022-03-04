@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.0.1
+Version: 2.1.0
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -21,8 +21,9 @@ LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 It does
 
 1. Asynchronously formatting on save
-2. Add commands for disabling formatting (globally or per filetype)
-3. Makes it easier to send format options to the LSP
+2. Sequentially formatting with all attached LSP server
+3. Add commands for disabling formatting (globally or per filetype)
+4. Makes it easier to send format options to the LSP
 
 It does not
 
@@ -36,11 +37,19 @@ function to each LSP that should use it.
 
 The setup functions takes one optional argument that maps |filetypes| to
 format options.
+
+`order` is a special format option, a list of client names. Formatting is
+requested from clients in the following order: first all clients that are not
+in the `order` list, then the remaining clients in the order as they occur in
+the `order` list. (same logic as |vim.lsp.buf.formatting_seq_sync()|)
  >
     require "lsp-format".setup {
         lua = {
             indent_width = 4,
         },
+        golang = {
+            order = { "gopls", "efm" }
+        }
     }
 
 ==============================================================================
@@ -50,10 +59,10 @@ format options.
 
     Formats and saves the current buffer.
     Optional takes format options separated by space.
-    Format options can be a key value pair separated by `=` `hello=world`, or
-    just a value `foobar`
+    Format options can be a key value pair separated by `=` `hello=world`,
+    just a value `foobar`, or a comma separated list for the order `efm,gopls`
  >
-    :Format indent_width=2 no_call_parentheses
+    :Format indent_width=2 no_call_parentheses order=efm,gopls
 
 ------------------------------------------------------------------------------
 :FormatDisable [{filetype}]                                    *FormatDisable*
@@ -76,6 +85,10 @@ format options.
 
 ==============================================================================
  4. CHANGELOG                                           *lsp-format-changelog*
+
+2.1.0
+  * Sequentially format with all attached LSP server
+  * Add special `order` format option
 
 2.0.1
   * Add notes to README
