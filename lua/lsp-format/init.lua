@@ -23,7 +23,8 @@ M.setup = function(format_options)
         end
         if
             vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
-            == vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
+                == vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
+            and not vim.startswith(vim.api.nvim_get_mode().mode, "i")
         then
             local view = vim.fn.winsaveview()
             vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
@@ -32,8 +33,8 @@ M.setup = function(format_options)
                 vim.b.format_saving = true
                 vim.cmd [[update]]
                 vim.b.format_saving = false
-                M._next()
             end
+            M._next()
         end
     end
 end
