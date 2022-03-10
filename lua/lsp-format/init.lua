@@ -15,7 +15,9 @@ M.setup = function(format_options)
 
     vim.lsp.handlers["textDocument/formatting"] = function(err, result, ctx)
         if err ~= nil then
-            vim.api.nvim_err_write(err)
+            local client = vim.lsp.get_client_by_id(ctx.client_id)
+            local client_name = client and client.name or string.format("client_id=%d", ctx.client_id)
+            vim.api.nvim_err_write(string.format("%s: %d: %s", client_name, err.code, err.message))
             return
         end
         if result == nil then
