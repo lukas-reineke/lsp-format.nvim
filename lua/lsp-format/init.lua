@@ -44,13 +44,6 @@ end
 M.format = function(format_options_string)
     if not vim.b.format_saving and not M.disabled and not M.disabled_filetypes[vim.bo.filetype] then
         local bufnr = vim.api.nvim_get_current_buf()
-        local clients = vim.tbl_values(vim.lsp.buf_get_clients())
-        for i, client in pairs(clients) do
-            if not client.resolved_capabilities.document_formatting then
-                table.remove(clients, i)
-            end
-        end
-
         local format_options = M.format_options[vim.bo.filetype] or {}
         for _, option in ipairs(vim.split(format_options_string or "", " ")) do
             local key, value = unpack(vim.split(option, "="))
@@ -58,6 +51,13 @@ M.format = function(format_options_string)
                 value = vim.split(value, ",")
             end
             format_options[key] = value or true
+        end
+
+        local clients = vim.tbl_values(vim.lsp.buf_get_clients())
+        for i, client in pairs(clients) do
+            if vim.tbl_contains(format_options.exclude or {}, client.name) then
+                table.remove(clients, i)
+            end
         end
 
         for _, client_name in pairs(format_options.order or {}) do
