@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.1.2
+Version: 2.2.0
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -37,6 +37,16 @@ function to each LSP that should use it.
 
 The setup functions takes one optional argument that maps |filetypes| to
 format options.
+
+`exclude` is a special format option, a list of client names to exclude from
+formatting.
+ >
+    require "lsp-format".setup {
+        typescript = {
+            exclude = { "tsserver" }
+        }
+    }
+
 
 `order` is a special format option, a list of client names. Formatting is
 requested from clients in the following order: first all clients that are not
@@ -85,6 +95,9 @@ the `order` list. (same logic as |vim.lsp.buf.formatting_seq_sync()|)
 
 ==============================================================================
  4. CHANGELOG                                           *lsp-format-changelog*
+
+2.2.0
+   Add `exclude` option
 
 2.1.2
   * Fix error logging

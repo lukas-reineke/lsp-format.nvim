@@ -84,6 +84,10 @@ Add this abbreviation into your dotfiles to do the right thing when doing `:wq`
 vim.cmd [[cabbrev wq execute "lua vim.lsp.buf.formatting_seq_sync()" <bar> wq]]
 ```
 
+#### `exclude` format option
+
+`exclude` is a special format option that lists LSP servers that should not format the buffer.
+
 #### `order` format option
 
 `order` is a special format option that determines the order formatting is requested from the LSP server.
@@ -128,15 +132,3 @@ require "lspconfig".efm.setup {
 Now Typescript gets formatted with 4 and YAML with 2 spaces by default.  
 And you can run `:Format tab_width=8` to overwrite the setting and format with 8 spaces.
 
-### How do I exclude an LSP server from formatting?
-
-To exclude a server, you have to set the clients `resolved_capabilities.document_formatting` to false.  
-Do this in the attach function, before you call `require "lsp-format".on_attach(client)`
-
-```lua
-local on_attach = function(client)
-    client.resolved_capabilities.document_formatting = false
-    require "lsp-format".on_attach(client)
-end
-require "lspconfig".gopls.setup { on_attach = on_attach }
-```
