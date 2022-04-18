@@ -7,7 +7,8 @@ It does
 1. Asynchronously formatting on save
 2. Sequentially formatting with all attached LSP server
 3. Add commands for disabling formatting (globally or per filetype)
-4. Makes it easier to send format options to the LSP
+4. Make it easier to send format options to the LSP
+5. Allow you to exclude specific LSP servers from formatting.
 
 It does not
 
