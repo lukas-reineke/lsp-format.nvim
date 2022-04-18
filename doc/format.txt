@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.2.2
+Version: 2.2.3
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -95,6 +95,9 @@ the `order` list. (same logic as |vim.lsp.buf.formatting_seq_sync()|)
 
 ==============================================================================
  4. CHANGELOG                                           *lsp-format-changelog*
+
+2.2.3
+   Don't format with client if `on_attach` was not called for that client
 
 2.2.2
    Don't overwrite the global format handler

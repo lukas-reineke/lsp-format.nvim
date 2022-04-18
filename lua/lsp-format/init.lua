@@ -3,6 +3,7 @@ local M = {
     disabled = false,
     disabled_filetypes = {},
     queue = {},
+    buffers = {},
 }
 
 M.setup = function(format_options)
@@ -31,7 +32,10 @@ M.format = function(format_options_string)
 
     local clients = vim.tbl_values(vim.lsp.buf_get_clients())
     for i, client in pairs(clients) do
-        if vim.tbl_contains(format_options.exclude or {}, client.name) then
+        if
+            vim.tbl_contains(format_options.exclude or {}, client.name)
+            or not vim.tbl_contains(M.buffers[bufnr] or {}, client.id)
+        then
             table.remove(clients, i)
         end
     end
@@ -78,14 +82,17 @@ M.toggle = function(filetype)
 end
 
 M.on_attach = function(client)
-    if client.resolved_capabilities.document_formatting then
-        vim.cmd [[
-            augroup Format
-            autocmd! * <buffer>
-            autocmd BufWritePost <buffer> lua require'lsp-format'.format()
-            augroup END
-        ]]
+    local bufnr = vim.api.nvim_get_current_buf()
+    if M.buffers[bufnr] == nil then
+        M.buffers[bufnr] = {}
     end
+    table.insert(M.buffers[bufnr], client.id)
+    vim.cmd [[
+        augroup Format
+        autocmd! * <buffer>
+        autocmd BufWritePost <buffer> lua require'lsp-format'.format()
+        augroup END
+    ]]
 end
 
 M._handler = function(err, result, ctx)
