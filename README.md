@@ -89,6 +89,9 @@ vim.cmd [[cabbrev wq execute "lua vim.lsp.buf.formatting_seq_sync()" <bar> wq]]
 
 `exclude` is a special format option that lists LSP servers that should not format the buffer.
 
+Alternatively, you can also just not call `on_attach` for the clients you don't want to use for
+formatting.
+
 #### `order` format option
 
 `order` is a special format option that determines the order formatting is requested from the LSP server.
