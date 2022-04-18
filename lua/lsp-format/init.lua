@@ -20,59 +20,63 @@ M.setup = function(format_options)
             vim.api.nvim_err_write(string.format("%s: %d: %s", client_name, err.code, err.message))
             return
         end
-        if result == nil then
+        if
+            result == nil
+            or vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick") ~= vim.api.nvim_buf_get_var(
+                ctx.bufnr,
+                "changedtick"
+            )
+            or vim.startswith(vim.api.nvim_get_mode().mode, "i")
+        then
             return
         end
-        if
-            vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
-                == vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
-            and not vim.startswith(vim.api.nvim_get_mode().mode, "i")
-        then
-            local view = vim.fn.winsaveview()
-            vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
-            vim.fn.winrestview(view)
-            if ctx.bufnr == vim.api.nvim_get_current_buf() then
-                vim.b.format_saving = true
-                vim.cmd [[update]]
-                vim.b.format_saving = false
-            end
-            M._next()
+
+        local view = vim.fn.winsaveview()
+        vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
+        vim.fn.winrestview(view)
+        if ctx.bufnr == vim.api.nvim_get_current_buf() then
+            vim.b.format_saving = true
+            vim.cmd [[update]]
+            vim.b.format_saving = false
         end
+        M._next()
     end
 end
 
 M.format = function(format_options_string)
-    if not vim.b.format_saving and not M.disabled and not M.disabled_filetypes[vim.bo.filetype] then
-        local bufnr = vim.api.nvim_get_current_buf()
-        local format_options = M.format_options[vim.bo.filetype] or {}
-        for _, option in ipairs(vim.split(format_options_string or "", " ")) do
-            local key, value = unpack(vim.split(option, "="))
-            if key == "order" then
-                value = vim.split(value, ",")
-            end
-            format_options[key] = value or true
-        end
-
-        local clients = vim.tbl_values(vim.lsp.buf_get_clients())
-        for i, client in pairs(clients) do
-            if vim.tbl_contains(format_options.exclude or {}, client.name) then
-                table.remove(clients, i)
-            end
-        end
-
-        for _, client_name in pairs(format_options.order or {}) do
-            for i, client in pairs(clients) do
-                if client.name == client_name then
-                    table.insert(clients, table.remove(clients, i))
-                    break
-                end
-            end
-        end
-
-        table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options })
-
-        M._next()
+    if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
+        return
     end
+
+    local bufnr = vim.api.nvim_get_current_buf()
+    local format_options = M.format_options[vim.bo.filetype] or {}
+    for _, option in ipairs(vim.split(format_options_string or "", " ")) do
+        local key, value = unpack(vim.split(option, "="))
+        if key == "order" or key == "exclude" then
+            value = vim.split(value, ",")
+        end
+        format_options[key] = value or true
+    end
+
+    local clients = vim.tbl_values(vim.lsp.buf_get_clients())
+    for i, client in pairs(clients) do
+        if vim.tbl_contains(format_options.exclude or {}, client.name) then
+            table.remove(clients, i)
+        end
+    end
+
+    for _, client_name in pairs(format_options.order or {}) do
+        for i, client in pairs(clients) do
+            if client.name == client_name then
+                table.insert(clients, table.remove(clients, i))
+                break
+            end
+        end
+    end
+
+    table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options })
+
+    M._next()
 end
 
 M._format = function(bufnr, client, format_options)
