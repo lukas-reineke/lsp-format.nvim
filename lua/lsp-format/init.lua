@@ -108,8 +108,14 @@ M.on_attach = function(client)
         event = "BufWritePre"
     end
 
+    local group = vim.api.nvim_create_augroup("Format", { clear = false })
+
+    vim.api.nvim_clear_autocmds {
+        buffer = bufnr,
+        group = group,
+    }
     vim.api.nvim_create_autocmd(event, {
-        group = vim.api.nvim_create_augroup("Format", {}),
+        group = group,
         desc = "format on save",
         pattern = "<buffer>",
         callback = M.format,
