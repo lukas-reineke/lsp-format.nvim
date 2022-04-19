@@ -9,20 +9,32 @@ local M = {
 M.setup = function(format_options)
     M.format_options = vim.tbl_deep_extend("force", M.format_options, format_options or {})
 
-    vim.cmd [[command! -nargs=* -bar Format lua require'lsp-format'.format("<args>")]]
-    vim.cmd [[command! -nargs=? -complete=filetype -bar FormatToggle lua require'lsp-format'.toggle(<q-args>)]]
-    vim.cmd [[command! -nargs=? -complete=filetype -bar FormatDisable lua require'lsp-format'.disable(<q-args>)]]
-    vim.cmd [[command! -nargs=? -complete=filetype -bar -bang FormatEnable lua require'lsp-format'.enable(<q-args>, "<bang>" == "!")]]
+    vim.api.nvim_create_user_command("Format", M.format, { nargs = "*", bar = true, force = true })
+    vim.api.nvim_create_user_command(
+        "FormatToggle",
+        M.toggle,
+        { nargs = "?", bar = true, complete = "filetype", force = true }
+    )
+    vim.api.nvim_create_user_command(
+        "FormatDisable",
+        M.disable,
+        { nargs = "?", bar = true, complete = "filetype", force = true }
+    )
+    vim.api.nvim_create_user_command(
+        "FormatEnable",
+        M.enable,
+        { nargs = "?", bar = true, complete = "filetype", force = true, bang = true }
+    )
 end
 
-M.format = function(format_options_string)
+M.format = function(options)
     if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
         return
     end
 
     local bufnr = vim.api.nvim_get_current_buf()
-    local format_options = M.format_options[vim.bo.filetype] or {}
-    for _, option in ipairs(vim.split(format_options_string or "", " ")) do
+    local format_options = vim.deepcopy(M.format_options[vim.bo.filetype] or {})
+    for _, option in ipairs(options.fargs or {}) do
         local key, value = unpack(vim.split(option, "="))
         if key == "order" or key == "exclude" then
             value = vim.split(value, ",")
@@ -31,10 +43,10 @@ M.format = function(format_options_string)
     end
 
     local clients = vim.tbl_values(vim.lsp.buf_get_clients())
-    for i, client in pairs(clients) do
+    for i = #clients, 1, -1 do
         if
-            vim.tbl_contains(format_options.exclude or {}, client.name)
-            or not vim.tbl_contains(M.buffers[bufnr] or {}, client.id)
+            vim.tbl_contains(format_options.exclude or {}, clients[i].name)
+            or not vim.tbl_contains(M.buffers[bufnr] or {}, clients[i].id)
         then
             table.remove(clients, i)
         end
@@ -49,35 +61,37 @@ M.format = function(format_options_string)
         end
     end
 
-    table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options })
+    if #clients > 0 then
+        table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options })
+    end
 
     M._next()
 end
 
-M.disable = function(filetype)
-    if filetype == "" then
+M.disable = function(options)
+    if options.args == "" then
         M.disabled = true
     else
-        M.disabled_filetypes[filetype] = true
+        M.disabled_filetypes[options.args] = true
     end
 end
 
-M.enable = function(filetype, bang)
-    if bang then
+M.enable = function(options)
+    if options.bang then
         M.disabled_filetypes = {}
         M.disabled = false
-    elseif filetype == "" then
+    elseif options.args == "" then
         M.disabled = false
     else
-        M.disabled_filetypes[filetype] = false
+        M.disabled_filetypes[options.args] = false
     end
 end
 
-M.toggle = function(filetype)
-    if filetype == "" then
+M.toggle = function(options)
+    if options.args == "" then
         M.disabled = not M.disabled
     else
-        M.disabled_filetypes[filetype] = not M.disabled_filetypes[filetype]
+        M.disabled_filetypes[options.args] = not M.disabled_filetypes[options.args]
     end
 end
 
@@ -87,12 +101,19 @@ M.on_attach = function(client)
         M.buffers[bufnr] = {}
     end
     table.insert(M.buffers[bufnr], client.id)
-    vim.cmd [[
-        augroup Format
-        autocmd! * <buffer>
-        autocmd BufWritePost <buffer> lua require'lsp-format'.format()
-        augroup END
-    ]]
+    local format_options = M.format_options[vim.bo.filetype] or {}
+
+    local event = "BufWritePost"
+    if format_options.sync then
+        event = "BufWritePre"
+    end
+
+    vim.api.nvim_create_autocmd(event, {
+        group = vim.api.nvim_create_augroup("Format", {}),
+        desc = "format on save",
+        pattern = "<buffer>",
+        callback = M.format,
+    })
 end
 
 M._handler = function(err, result, ctx)
@@ -127,7 +148,14 @@ end
 M._format = function(bufnr, client, format_options)
     vim.b.format_changedtick = vim.b.changedtick
     local params = vim.lsp.util.make_formatting_params(format_options)
-    client.request("textDocument/formatting", params, M._handler, bufnr)
+    local method = "textDocument/formatting"
+    local timeout_ms = 2000
+    if format_options.sync then
+        local result = client.request_sync(method, params, timeout_ms, bufnr) or {}
+        M._handler(result.err, result.result, { client_id = client.id, bufnr = bufnr })
+    else
+        client.request(method, params, M._handler, bufnr)
+    end
 end
 
 M._next = function()

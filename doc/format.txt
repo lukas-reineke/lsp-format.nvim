@@ -2,16 +2,17 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.2.3
+Version: 2.3.0
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
 
   1. Introduction                          |lsp-format-introduction|
   2. Setup                                 |lsp-format-setup|
-  3. Commands                              |lsp-format-commands|
-  4. Changelog                             |lsp-format-changelog|
-  5. License                               |lsp-format-license|
+  3. Special Format Options                |lsp-format-special-format-options|
+  4. Commands                              |lsp-format-commands|
+  5. Changelog                             |lsp-format-changelog|
+  6. License                               |lsp-format-license|
 
 ==============================================================================
  1. INTRODUCTION                                     *lsp-format-introduction*
@@ -20,10 +21,11 @@ LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 
 It does
 
-1. Asynchronously formatting on save
-2. Sequentially formatting with all attached LSP server
+1. Asynchronous or synchronous formatting on save
+2. Sequential formatting with all attached LSP server
 3. Add commands for disabling formatting (globally or per filetype)
-4. Makes it easier to send format options to the LSP
+4. Make it easier to send format options to the LSP
+5. Allow you to exclude specific LSP servers from formatting.
 
 It does not
 
@@ -38,32 +40,55 @@ function to each LSP that should use it.
 The setup functions takes one optional argument that maps |filetypes| to
 format options.
 
-`exclude` is a special format option, a list of client names to exclude from
-formatting.
- >
-    require "lsp-format".setup {
-        typescript = {
-            exclude = { "tsserver" }
-        }
-    }
-
-
-`order` is a special format option, a list of client names. Formatting is
-requested from clients in the following order: first all clients that are not
-in the `order` list, then the remaining clients in the order as they occur in
-the `order` list. (same logic as |vim.lsp.buf.formatting_seq_sync()|)
- >
-    require "lsp-format".setup {
-        lua = {
-            indent_width = 4,
-        },
-        golang = {
-            order = { "gopls", "efm" }
-        }
-    }
 
 ==============================================================================
- 3. COMMANDS                                             *lsp-format-commands*
+ 3. SPECIAL FORMAT OPTIONS                 *lsp-format-special-format-options*
+
+exclude                                                   *lsp-format-exclude*
+
+  `exclude` is a table of client names to exclude from formatting.
+
+  Example: >
+
+      require "lsp-format".setup {
+          go = {
+              exclude = { "gopls" }
+          }
+      }
+
+
+------------------------------------------------------------------------------
+order                                                       *lsp-format-order*
+
+  `order` is a table of client names. Formatting is requested from clients in
+  the following order: first all clients that are not in the `order` table,
+  then the remaining clients in the order as they occur in the `order` table.
+  (same logic as |vim.lsp.buf.formatting_seq_sync()|)
+
+  Example: >
+
+      require "lsp-format".setup {
+          go = {
+              order = { "gopls", "efm" }
+          }
+      }
+
+------------------------------------------------------------------------------
+sync                                                         *lsp-format-sync*
+
+  `sync` is a boolean flag to turn on synchronous formatting. The editor will
+  block until formatting is done.
+
+  Example: >
+
+      require "lsp-format".setup {
+          go = {
+              sync = true
+          }
+      }
+
+==============================================================================
+ 4. COMMANDS                                             *lsp-format-commands*
 
 :Format [{format_options}]                                            *Format*
 
@@ -94,7 +119,13 @@ the `order` list. (same logic as |vim.lsp.buf.formatting_seq_sync()|)
     If no filetype is given, it uses the global state.
 
 ==============================================================================
- 4. CHANGELOG                                           *lsp-format-changelog*
+ 5. CHANGELOG                                           *lsp-format-changelog*
+
+2.3.0
+   Add `sync` option
+   Fix overwriting global format options from command
+   Fix empty queue when excluding all clients
+   Fix wrong index when excluding clients
 
 2.2.3
    Don't format with client if `on_attach` was not called for that client
@@ -138,7 +169,7 @@ the `order` list. (same logic as |vim.lsp.buf.formatting_seq_sync()|)
   * First release
 
 ==============================================================================
- 5. LICENSE                                               *lsp-format-license*
+ 6. LICENSE                                               *lsp-format-license*
 
 The MIT Licence
 http://www.opensource.org/licenses/mit-license.php

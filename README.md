@@ -4,8 +4,8 @@ LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 
 It does
 
-1. Asynchronously formatting on save
-2. Sequentially formatting with all attached LSP server
+1. Asynchronous or synchronous formatting on save
+2. Sequential formatting with all attached LSP server
 3. Add commands for disabling formatting (globally or per filetype)
 4. Make it easier to send format options to the LSP
 5. Allow you to exclude specific LSP servers from formatting.
@@ -13,6 +13,10 @@ It does
 It does not
 
 1. _Provide any formatting by itself._ You still need to use an LSP server
+
+## Requirements
+
+LSP-format requires Neovim 0.7 or newer.
 
 ## Install
 
@@ -66,6 +70,25 @@ require "lspconfig".gopls.setup { on_attach = on_attach }
 
 That's it, saving a buffer will format it now.
 
+## Special format options
+
+There are a couple special format options that LSP-fromat uses.
+
+#### `exclude` format option
+
+`exclude` is a table of LSP servers that should not format the buffer.
+
+Alternatively, you can also just not call `on_attach` for the clients you don't want to use for
+formatting.
+
+#### `order` format option
+
+`order` is a table that determines the order formatting is requested from the LSP server.
+
+#### `sync` format option
+
+`sync` turns on synchronous formatting. The editor will block until the formatting is done.
+
 ## Notes
 
 #### Make sure you remove any old format on save code
@@ -73,34 +96,23 @@ That's it, saving a buffer will format it now.
 You don't want to run formatting twice. If you had setup formatting on save before, remove it.  
 You can check if something is listening on buffer write events with `:autocmd BufWritePre` and `:autocmd BufWritePost`
 
-#### `:wq` will not format
+#### `:wq` will not format when not using `sync`
 
-Because formatting is async now, you can't save and quit in the same command. The formatting results will not get back
+Because default formatting is async, you can't save and quit in the same command. The formatting results will not get back
 in time and Neovim will close without applying the changes.  
-In this case you need to use `vim.lsp.buf.formatting_seq_sync()`
+In this case you need to use the `sync` format option.
 
 Add this abbreviation into your dotfiles to do the right thing when doing `:wq`
 
 ```lua
-vim.cmd [[cabbrev wq execute "lua vim.lsp.buf.formatting_seq_sync()" <bar> wq]]
+vim.cmd [[cabbrev wq execute "Format sync" <bar> wq]]
 ```
-
-#### `exclude` format option
-
-`exclude` is a special format option that lists LSP servers that should not format the buffer.
-
-Alternatively, you can also just not call `on_attach` for the clients you don't want to use for
-formatting.
-
-#### `order` format option
-
-`order` is a special format option that determines the order formatting is requested from the LSP server.
 
 ## FAQ
 
 ### How is it different to `autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_sync()`?
 
-The main difference is that LSP-format.nvim is async. It will format on save, _without blocking the editor_.  
+The main difference is that LSP-format.nvim is async by default. It will format on save, _without blocking the editor_.  
 And it adds some convenience with disable commands and format options.  
 But the end result is the same.
 
@@ -135,4 +147,3 @@ require "lspconfig".efm.setup {
 
 Now Typescript gets formatted with 4 and YAML with 2 spaces by default.  
 And you can run `:Format tab_width=8` to overwrite the setting and format with 8 spaces.
-
