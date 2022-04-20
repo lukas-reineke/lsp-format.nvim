@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.3.1
+Version: 2.3.2
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -120,6 +120,9 @@ sync                                                         *lsp-format-sync*
 
 ==============================================================================
  5. CHANGELOG                                           *lsp-format-changelog*
+
+2.3.2
+   Continue with the next client when one client has an error
 
 2.3.1
    Fix clear autogroup only for buffer
