@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.3.2
+Version: 2.3.3
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -120,6 +120,10 @@ sync                                                         *lsp-format-sync*
 
 ==============================================================================
  5. CHANGELOG                                           *lsp-format-changelog*
+
+2.3.3
+   Use "vim.lsp.log" for logging
+   Don't attach servers that don't support formatting
 
 2.3.2
    Continue with the next client when one client has an error

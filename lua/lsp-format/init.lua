@@ -1,3 +1,5 @@
+local log = require "vim.lsp.log"
+
 local M = {
     format_options = {},
     disabled = false,
@@ -95,6 +97,12 @@ M.toggle = function(options)
 end
 
 M.on_attach = function(client)
+    if not client.supports_method "textDocument/formatting" then
+        log.warn(
+            string.format('"textDocument/formatting" is not supported for %s, not attaching lsp-format', client.name)
+        )
+        return
+    end
     local bufnr = vim.api.nvim_get_current_buf()
     if M.buffers[bufnr] == nil then
         M.buffers[bufnr] = {}
@@ -125,7 +133,7 @@ M._handler = function(err, result, ctx)
     if err ~= nil then
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         local client_name = client and client.name or string.format("client_id=%d", ctx.client_id)
-        vim.api.nvim_err_write(string.format("%s: %d: %s", client_name, err.code, err.message))
+        log.error(string.format("%s: %d: %s", client_name, err.code, err.message))
         M._next()
         return
     end
