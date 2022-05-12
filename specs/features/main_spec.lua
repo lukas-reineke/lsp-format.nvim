@@ -28,6 +28,10 @@ describe("lsp-format", function()
         require("lsp-format").on_attach(c)
     end)
 
+    after_each(function()
+        mock.revert(c)
+    end)
+
     it("sends a valid format request", function()
         local f = require "lsp-format"
         f.format {}
@@ -41,5 +45,27 @@ describe("lsp-format", function()
                 uri = "file://",
             },
         }, match.is_ref(f._handler), 1)
+    end)
+
+    it("FormatToggle prevent/allow formatting", function()
+        local f = require "lsp-format"
+        f.toggle { args = "" }
+        f.format {}
+        assert.stub(c.request).was_called(0)
+
+        f.toggle { args = "" }
+        f.format {}
+        assert.stub(c.request).was_called(1)
+    end)
+
+    it("FormatDisable/Enable prevent/allow formatting", function()
+        local f = require "lsp-format"
+        f.disable { args = "" }
+        f.format {}
+        assert.stub(c.request).was_called(0)
+
+        f.enable { args = "" }
+        f.format {}
+        assert.stub(c.request).was_called(1)
     end)
 end)
