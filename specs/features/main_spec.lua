@@ -1,5 +1,6 @@
 local mock = require "luassert.mock"
 local match = require "luassert.match"
+local f = require "lsp-format"
 
 local mock_client = {
     id = 1,
@@ -24,8 +25,8 @@ describe("lsp-format", function()
         c.supports_method = function(_)
             return true
         end
-        require("lsp-format").setup {}
-        require("lsp-format").on_attach(c)
+        f.setup {}
+        f.on_attach(c)
     end)
 
     after_each(function()
@@ -33,7 +34,6 @@ describe("lsp-format", function()
     end)
 
     it("sends a valid format request", function()
-        local f = require "lsp-format"
         f.format {}
         assert.stub(c.request).was_called(1)
         assert.stub(c.request).was_called_with("textDocument/formatting", {
@@ -48,7 +48,6 @@ describe("lsp-format", function()
     end)
 
     it("FormatToggle prevent/allow formatting", function()
-        local f = require "lsp-format"
         f.toggle { args = "" }
         f.format {}
         assert.stub(c.request).was_called(0)
@@ -59,7 +58,6 @@ describe("lsp-format", function()
     end)
 
     it("FormatDisable/Enable prevent/allow formatting", function()
-        local f = require "lsp-format"
         f.disable { args = "" }
         f.format {}
         assert.stub(c.request).was_called(0)
@@ -67,5 +65,76 @@ describe("lsp-format", function()
         f.enable { args = "" }
         f.format {}
         assert.stub(c.request).was_called(1)
+    end)
+
+    it("sends default format options", function()
+        f.setup {
+            lua = {
+                bool_test = true,
+                int_test = 1,
+                string_test = "string",
+            },
+        }
+        vim.bo.filetype = "lua"
+        f.format {}
+        assert.stub(c.request).was_called(1)
+        assert.stub(c.request).was_called_with("textDocument/formatting", {
+            options = {
+                insertSpaces = false,
+                tabSize = 8,
+                bool_test = true,
+                int_test = 1,
+                string_test = "string",
+            },
+            textDocument = {
+                uri = "file://",
+            },
+        }, match.is_ref(f._handler), 1)
+    end)
+
+    it("sends format options", function()
+        f.format {
+            fargs = { "bool_test", "int_test=1", "string_test=string" },
+        }
+        assert.stub(c.request).was_called(1)
+        assert.stub(c.request).was_called_with("textDocument/formatting", {
+            options = {
+                insertSpaces = false,
+                tabSize = 8,
+                bool_test = true,
+                int_test = 1,
+                string_test = "string",
+            },
+            textDocument = {
+                uri = "file://",
+            },
+        }, match.is_ref(f._handler), 1)
+    end)
+
+    it("overwrites default format options", function()
+        f.setup {
+            lua = {
+                bool_test = true,
+                int_test = 1,
+                string_test = "string",
+            },
+        }
+        vim.bo.filetype = "lua"
+        f.format {
+            fargs = { "bool_test=false", "int_test=2", "string_test=another_string" },
+        }
+        assert.stub(c.request).was_called(1)
+        assert.stub(c.request).was_called_with("textDocument/formatting", {
+            options = {
+                insertSpaces = false,
+                tabSize = 8,
+                bool_test = false,
+                int_test = 2,
+                string_test = "another_string",
+            },
+            textDocument = {
+                uri = "file://",
+            },
+        }, match.is_ref(f._handler), 1)
     end)
 end)
