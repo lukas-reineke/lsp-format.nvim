@@ -39,5 +39,5 @@ jobs:
 
       - name: test
         run: |
-          luacheck lua
+          luacheck lua specs
 

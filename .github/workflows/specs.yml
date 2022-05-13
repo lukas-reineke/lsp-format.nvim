@@ -1,0 +1,30 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - master
+      - plenary-testing-framework
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - stable
+          - nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        id: neovim
+        with:
+          neovim: true
+          version: ${{ matrix.version }}
+      - name: Run tests
+        run: make specs
