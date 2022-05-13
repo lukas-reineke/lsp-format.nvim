@@ -41,3 +41,21 @@ jobs:
         run: |
           luacheck lua specs
 
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - stable
+          - nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        id: neovim
+        with:
+          neovim: true
+          version: ${{ matrix.version }}
+      - name: Run tests
+        run: make specs
