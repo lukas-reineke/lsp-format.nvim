@@ -1,5 +1,7 @@
 local mock = require "luassert.mock"
+local stub = require "luassert.stub"
 local match = require "luassert.match"
+local spy = require "luassert.spy"
 local f = require "lsp-format"
 
 local mock_client = {
@@ -9,6 +11,17 @@ local mock_client = {
     request_sync = function(_, _, _, _) end,
     supports_method = function(_) end,
     setup = function() end,
+}
+
+local _test_file_path = "/tmp/lsp-format-test-file.txt"
+local _text_edit_result = {
+    {
+        range = {
+            start = { line = 0, character = 0 },
+            ["end"] = { line = 0, character = 19 },
+        },
+        newText = "some formatted text",
+    },
 }
 
 vim.lsp.buf_get_clients = function()
@@ -136,5 +149,37 @@ describe("lsp-format", function()
                 uri = "file://",
             },
         }, match.is_ref(f._handler), 1)
+    end)
+
+    describe("updating the buffer", function()
+        local cmd_spy
+
+        before_each(function()
+            vim.cmd(":write! " .. _test_file_path)
+            cmd_spy = spy.on(vim, "cmd")
+        end)
+
+        after_each(function()
+            cmd_spy.revert(cmd_spy)
+        end)
+
+        it("updates the buffer", function()
+            c.request = function(_, _, handler, bufnr)
+                handler(nil, _text_edit_result, { bufnr = bufnr })
+            end
+            f.format {}
+            assert.spy(cmd_spy).was.called(1)
+            assert.spy(cmd_spy).was.called_with "update"
+        end)
+
+        it("doesn't update the buffer if entered insert mode", function()
+            c.request = function(_, _, handler, bufnr)
+                local get_mode = stub.new(vim.api, "nvim_get_mode").returns { mode = "insert" }
+                handler(nil, _text_edit_result, { bufnr = bufnr })
+                get_mode.revert(get_mode)
+            end
+            f.format {}
+            assert.spy(cmd_spy).was.called(0)
+        end)
     end)
 end)
