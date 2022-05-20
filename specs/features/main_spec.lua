@@ -153,6 +153,7 @@ describe("lsp-format", function()
 
     describe("updating the buffer", function()
         local cmd_spy
+        local get_mode = stub.new()
 
         before_each(function()
             vim.cmd(":write! " .. _test_file_path)
@@ -161,6 +162,7 @@ describe("lsp-format", function()
 
         after_each(function()
             cmd_spy.revert(cmd_spy)
+            get_mode.revert(get_mode)
         end)
 
         it("updates the buffer", function()
@@ -174,12 +176,23 @@ describe("lsp-format", function()
 
         it("doesn't update the buffer if entered insert mode", function()
             c.request = function(_, _, handler, bufnr)
-                local get_mode = stub.new(vim.api, "nvim_get_mode").returns { mode = "insert" }
+                get_mode = stub.new(vim.api, "nvim_get_mode").returns { mode = "insert" }
                 handler(nil, _text_edit_result, { bufnr = bufnr })
-                get_mode.revert(get_mode)
             end
             f.format {}
             assert.spy(cmd_spy).was.called(0)
+            assert.spy(cmd_spy).was_not.called_with "update"
+        end)
+
+        it("formats from insert mode if forced to", function()
+            f.setup({}, { prioritize_async_over_formatting = false })
+            c.request = function(_, _, handler, bufnr)
+                get_mode = stub.new(vim.api, "nvim_get_mode").returns { mode = "insert" }
+                handler(nil, _text_edit_result, { bufnr = bufnr })
+            end
+            f.format {}
+            assert.spy(cmd_spy).was.called(1)
+            assert.spy(cmd_spy).was.called_with "update"
         end)
     end)
 end)

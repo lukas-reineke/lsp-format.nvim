@@ -6,9 +6,16 @@ local M = {
     disabled_filetypes = {},
     queue = {},
     buffers = {},
+    prioritize_async_over_formatting = true,
 }
 
-M.setup = function(format_options)
+M.setup = function(format_options, plugin_options)
+    if plugin_options ~= nil then
+        if plugin_options.prioritize_async_over_formatting == false then
+            M.prioritize_async_over_formatting = false
+        end
+    end
+
     M.format_options = vim.tbl_deep_extend("force", M.format_options, format_options or {})
 
     vim.api.nvim_create_user_command("Format", M.format, { nargs = "*", bar = true, force = true })
@@ -162,22 +169,31 @@ M._handler = function(err, result, ctx)
     if not vim.api.nvim_buf_is_loaded(ctx.bufnr) then
         vim.fn.bufload(ctx.bufnr)
         vim.api.nvim_buf_set_var(ctx.bufnr, "format_changedtick", vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick"))
-    elseif
-        vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
-            ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
-        or vim.startswith(vim.api.nvim_get_mode().mode, "i")
-    then
+    elseif M._has_changedtick_changed(ctx.bufnr) or M._unformattable_insertmode() then
         M._next()
         return
     end
 
-    vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
-    if ctx.bufnr == vim.api.nvim_get_current_buf() then
+    M._replace_buffer_contents_with_result(ctx.bufnr, result)
+end
+
+M._replace_buffer_contents_with_result = function(bufnr, result)
+    vim.lsp.util.apply_text_edits(result, bufnr, "utf-16")
+    if bufnr == vim.api.nvim_get_current_buf() then
         vim.b.format_saving = true
         vim.cmd [[update]]
         vim.b.format_saving = false
     end
     M._next()
+end
+
+M._has_changedtick_changed = function(bufnr)
+    return vim.api.nvim_buf_get_var(bufnr, "format_changedtick") ~= vim.api.nvim_buf_get_var(bufnr, "changedtick")
+end
+
+M._unformattable_insertmode = function()
+    local is_insert_mode = vim.startswith(vim.api.nvim_get_mode().mode, "i")
+    return is_insert_mode and M.prioritize_async_over_formatting
 end
 
 M._format = function(bufnr, client, format_options)
