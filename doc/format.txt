@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.3.3
+Version: 2.4.0
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -87,6 +87,20 @@ sync                                                         *lsp-format-sync*
           }
       }
 
+------------------------------------------------------------------------------
+force                                                       *lsp-format-force*
+
+  `force` is a boolean flag. When on the format result will always be written
+  to the buffer, even if the buffer changed.
+
+  Example: >
+
+      require "lsp-format".setup {
+          go = {
+              force = true
+          }
+      }
+
 ==============================================================================
  4. COMMANDS                                             *lsp-format-commands*
 
@@ -120,6 +134,9 @@ sync                                                         *lsp-format-sync*
 
 ==============================================================================
  5. CHANGELOG                                           *lsp-format-changelog*
+
+2.4.0
+   Add `force` option
 
 2.3.3
    Use "vim.lsp.log" for logging

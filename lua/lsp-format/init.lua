@@ -29,6 +29,27 @@ M.setup = function(format_options)
     )
 end
 
+M._parse_value = function(key, value)
+    if not value then
+        return true
+    end
+    if key == "order" or key == "exclude" then
+        return vim.split(value, ",")
+    end
+    local int_value = tonumber(value)
+    if int_value then
+        return int_value
+    end
+    if value == "false" then
+        return false
+    end
+    if value == "true" then
+        return true
+    end
+
+    return value
+end
+
 M.format = function(options)
     if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
         return
@@ -38,10 +59,7 @@ M.format = function(options)
     local format_options = vim.deepcopy(M.format_options[vim.bo.filetype] or {})
     for _, option in ipairs(options.fargs or {}) do
         local key, value = unpack(vim.split(option, "="))
-        if key == "order" or key == "exclude" then
-            value = vim.split(value, ",")
-        end
-        format_options[key] = value or true
+        format_options[key] = M._parse_value(key, value)
     end
 
     local clients = vim.tbl_values(vim.lsp.buf_get_clients())
@@ -144,10 +162,14 @@ M._handler = function(err, result, ctx)
     if not vim.api.nvim_buf_is_loaded(ctx.bufnr) then
         vim.fn.bufload(ctx.bufnr)
         vim.api.nvim_buf_set_var(ctx.bufnr, "format_changedtick", vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick"))
-    elseif
-        vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
-            ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
-        or vim.startswith(vim.api.nvim_get_mode().mode, "i")
+    end
+    if
+        not ctx.params.options.force
+        and (
+            vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
+                ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
+            or vim.startswith(vim.api.nvim_get_mode().mode, "i")
+        )
     then
         M._next()
         return
