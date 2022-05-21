@@ -191,7 +191,7 @@ M._format = function(bufnr, client, format_options)
     local timeout_ms = 2000
     if format_options.sync then
         local result = client.request_sync(method, params, timeout_ms, bufnr) or {}
-        M._handler(result.err, result.result, { client_id = client.id, bufnr = bufnr })
+        M._handler(result.err, result.result, { client_id = client.id, bufnr = bufnr, params = params })
     else
         client.request(method, params, M._handler, bufnr)
     end
