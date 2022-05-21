@@ -162,10 +162,14 @@ M._handler = function(err, result, ctx)
     if not vim.api.nvim_buf_is_loaded(ctx.bufnr) then
         vim.fn.bufload(ctx.bufnr)
         vim.api.nvim_buf_set_var(ctx.bufnr, "format_changedtick", vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick"))
-    elseif
-        vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
-            ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
-        or vim.startswith(vim.api.nvim_get_mode().mode, "i")
+    end
+    if
+        not ctx.params.options.force
+        and (
+            vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
+                ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
+            or vim.startswith(vim.api.nvim_get_mode().mode, "i")
+        )
     then
         M._next()
         return

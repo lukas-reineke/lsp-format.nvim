@@ -89,6 +89,10 @@ formatting.
 
 `sync` turns on synchronous formatting. The editor will block until the formatting is done.
 
+#### `force` format option
+
+`force` will write the format result to the buffer, even if the buffer changed after the format request started.
+
 ## Notes
 
 #### Make sure you remove any old format on save code

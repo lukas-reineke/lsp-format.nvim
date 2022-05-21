@@ -1,5 +1,6 @@
 local mock = require "luassert.mock"
 local match = require "luassert.match"
+local spy = require "luassert.spy"
 local f = require "lsp-format"
 
 local mock_client = {
@@ -19,9 +20,11 @@ end
 
 describe("lsp-format", function()
     local c
+    local api
 
     before_each(function()
         c = mock(mock_client, true)
+        api = mock(vim.api)
         c.supports_method = function(_)
             return true
         end
@@ -31,6 +34,7 @@ describe("lsp-format", function()
 
     after_each(function()
         mock.revert(c)
+        mock.revert(api)
     end)
 
     it("sends a valid format request", function()
@@ -136,5 +140,59 @@ describe("lsp-format", function()
                 uri = "file://",
             },
         }, match.is_ref(f._handler), 1)
+    end)
+
+    it("does not overwrite changes", function()
+        local apply_text_edits = spy.on(vim.lsp.util, "apply_text_edits")
+        c.request = function(_, params, handler, bufnr)
+            api.nvim_buf_get_var = function(_, var)
+                if var == "format_changedtick" then
+                    return 9999
+                end
+                return 1
+            end
+            handler(nil, {}, { bufnr = bufnr, params = params })
+        end
+        f.format {}
+        assert.spy(apply_text_edits).was.called(0)
+    end)
+
+    it("does overwrite changes with force", function()
+        local apply_text_edits = spy.on(vim.lsp.util, "apply_text_edits")
+        c.request = function(_, params, handler, bufnr)
+            api.nvim_buf_get_var = function(_, var)
+                if var == "format_changedtick" then
+                    return 9999
+                end
+                return 1
+            end
+            handler(nil, {}, { bufnr = bufnr, params = params })
+        end
+        f.format { fargs = { "force=true" } }
+        assert.spy(apply_text_edits).was.called(1)
+    end)
+
+    it("does not overwrite when in insert mode", function()
+        local apply_text_edits = spy.on(vim.lsp.util, "apply_text_edits")
+        c.request = function(_, params, handler, bufnr)
+            api.nvim_get_mode = function()
+                return "insert"
+            end
+            handler(nil, {}, { bufnr = bufnr, params = params })
+        end
+        f.format {}
+        assert.spy(apply_text_edits).was.called(0)
+    end)
+
+    it("does overwrite when in insert mode with force", function()
+        local apply_text_edits = spy.on(vim.lsp.util, "apply_text_edits")
+        c.request = function(_, params, handler, bufnr)
+            api.nvim_get_mode = function()
+                return "insert"
+            end
+            handler(nil, {}, { bufnr = bufnr, params = params })
+        end
+        f.format { fargs = { "force=true" } }
+        assert.spy(apply_text_edits).was.called(1)
     end)
 end)
