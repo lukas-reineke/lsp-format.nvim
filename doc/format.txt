@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.4.0
+Version: 2.4.1
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
@@ -134,6 +134,9 @@ force                                                       *lsp-format-force*
 
 ==============================================================================
  5. CHANGELOG                                           *lsp-format-changelog*
+
+2.4.1
+   Fix `force` option when `sync` is true
 
 2.4.0
    Add `force` option
