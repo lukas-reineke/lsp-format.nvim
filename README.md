@@ -72,7 +72,7 @@ That's it, saving a buffer will format it now.
 
 ## Special format options
 
-There are a couple special format options that LSP-fromat uses.
+There are a couple special format options that LSP-format uses.
 
 #### `exclude` format option
 
