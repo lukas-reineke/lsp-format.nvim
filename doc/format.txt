@@ -11,8 +11,7 @@ CONTENTS                                                          *lsp-format*
   2. Setup                                 |lsp-format-setup|
   3. Special Format Options                |lsp-format-special-format-options|
   4. Commands                              |lsp-format-commands|
-  5. Changelog                             |lsp-format-changelog|
-  6. License                               |lsp-format-license|
+  5. License                               |lsp-format-license|
 
 ==============================================================================
  1. INTRODUCTION                                     *lsp-format-introduction*
@@ -39,6 +38,8 @@ function to each LSP that should use it.
 
 The setup functions takes one optional argument that maps |filetypes| to
 format options.
+Format options can be strings, numbers, booleans, or functions that resolve
+to strings, numbers, or booleans.
 
 
 ==============================================================================
@@ -53,7 +54,12 @@ exclude                                                   *lsp-format-exclude*
       require "lsp-format".setup {
           go = {
               exclude = { "gopls" }
-          }
+          },
+          typescript = {
+              tab_width = function()
+                  return vim.opt.shiftwidth:get()
+              end,
+          },
       }
 
 
@@ -133,73 +139,7 @@ force                                                       *lsp-format-force*
     If no filetype is given, it uses the global state.
 
 ==============================================================================
- 5. CHANGELOG                                           *lsp-format-changelog*
-
-2.4.1
-   Fix `force` option when `sync` is true
-
-2.4.0
-   Add `force` option
-
-2.3.3
-   Use "vim.lsp.log" for logging
-   Don't attach servers that don't support formatting
-
-2.3.2
-   Continue with the next client when one client has an error
-
-2.3.1
-   Fix clear autogroup only for buffer
-
-2.3.0
-   Add `sync` option
-   Fix overwriting global format options from command
-   Fix empty queue when excluding all clients
-   Fix wrong index when excluding clients
-
-2.2.3
-   Don't format with client if `on_attach` was not called for that client
-
-2.2.2
-   Don't overwrite the global format handler
-
-2.2.1
-   Fix `exclude` command argument when calling with more than one value
-
-2.2.0
-   Add `exclude` option
-
-2.1.2
-  * Fix error logging
-
-2.1.1
-  * Don't overwrite the buffer when currently in insert mode
-
-2.1.0
-  * Sequentially format with all attached LSP server
-  * Add special `order` format option
-
-2.0.1
-  * Add notes to README
-
-2.0.0
-  * Removed formatting from the plugin itself, and use LSP instead.
-
-1.1.2
-  * Removed debug print
-
-1.1.1
-  * Fixed wrong directory generation when file is in root of path
-    Thanks for the help by @ndreas
-
-1.1.0
-  * Added `tempfile_dir` option
-
-1.0.0
-  * First release
-
-==============================================================================
- 6. LICENSE                                               *lsp-format-license*
+ 5. LICENSE                                               *lsp-format-license*
 
 The MIT Licence
 http://www.opensource.org/licenses/mit-license.php
