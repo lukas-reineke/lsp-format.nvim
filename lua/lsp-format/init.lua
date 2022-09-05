@@ -57,6 +57,11 @@ M.format = function(options)
 
     local bufnr = vim.api.nvim_get_current_buf()
     local format_options = vim.deepcopy(M.format_options[vim.bo.filetype] or {})
+    for key, option in pairs(format_options) do
+        if type(option) == "function" then
+            format_options[key] = option()
+        end
+    end
     for _, option in ipairs(options.fargs or {}) do
         local key, value = unpack(vim.split(option, "="))
         format_options[key] = M._parse_value(key, value)

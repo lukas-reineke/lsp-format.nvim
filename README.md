@@ -28,11 +28,9 @@ Use your favourite plugin manager to install.
 
 ```lua
 -- init.lua
-require("packer").startup(
-    function()
-        use "lukas-reineke/lsp-format.nvim"
-    end
-)
+require("packer").startup(function()
+    use "lukas-reineke/lsp-format.nvim"
+end)
 ```
 
 #### Example with Plug
@@ -52,7 +50,7 @@ To use LSP-format, you have to run the setup function, and pass the `on_attach` 
 
 ```lua
 require("lsp-format").setup {}
-require "lspconfig".gopls.setup { on_attach = require "lsp-format".on_attach }
+require("lspconfig").gopls.setup { on_attach = require("lsp-format").on_attach }
 ```
 
 or
@@ -61,11 +59,11 @@ or
 require("lsp-format").setup {}
 
 local on_attach = function(client)
-    require "lsp-format".on_attach(client)
+    require("lsp-format").on_attach(client)
 
     -- ... custom code ...
 end
-require "lspconfig".gopls.setup { on_attach = on_attach }
+require("lspconfig").gopls.setup { on_attach = on_attach }
 ```
 
 That's it, saving a buffer will format it now.
@@ -114,9 +112,11 @@ vim.cmd [[cabbrev wq execute "Format sync" <bar> wq]]
 
 ## FAQ
 
-### How is it different to `autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_sync()`?
+### How is it different to `autocmd BufWritePre <buffer> lua vim.lsp.buf.format()`?
 
 The main difference is that LSP-format.nvim is async by default. It will format on save, _without blocking the editor_.  
+When the formatting is done, LSP-format.nvim will only change the buffer if it
+didn't change since the time formatting was called.  
 And it adds some convenience with disable commands and format options.  
 But the end result is the same.
 
@@ -125,20 +125,27 @@ But the end result is the same.
 You can pass the format options into the `setup` function, or as arguments to the `:Format` command.  
 How the format options look like depends on the LSP server you are using.
 
+The format options can either be string, number, boolean, or a function that
+resolves to those.
+
 As an example, [mattn/efm-langserver](https://github.com/mattn/efm-langserver) uses `${}` template syntax with which you can
 define your own options `${--flag:lua_variable_name}`.
 
 ```lua
-require "lsp-format".setup {
-    typescript = { tab_width = 4 },
+require("lsp-format").setup {
+    typescript = {
+        tab_width = function()
+            return vim.opt.shiftwidth:get()
+        end,
+    },
     yaml = { tab_width = 2 },
 }
 local prettier = {
     formatCommand = [[prettier --stdin-filepath ${INPUT} ${--tab-width:tab_width}]],
     formatStdin = true,
 }
-require "lspconfig".efm.setup {
-    on_attach = require "lsp-format".on_attach,
+require("lspconfig").efm.setup {
+    on_attach = require("lsp-format").on_attach,
     init_options = { documentFormatting = true },
     settings = {
         languages = {
@@ -149,5 +156,5 @@ require "lspconfig".efm.setup {
 }
 ```
 
-Now Typescript gets formatted with 4 and YAML with 2 spaces by default.  
+Now Typescript gets formatted with what `shiftwidth` is set to, and YAML with 2 spaces by default.  
 And you can run `:Format tab_width=8` to overwrite the setting and format with 8 spaces.
