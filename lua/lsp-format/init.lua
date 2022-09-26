@@ -4,6 +4,7 @@ local M = {
     format_options = {},
     disabled = false,
     disabled_filetypes = {},
+    saving_buffers = {},
     queue = {},
     buffers = {},
 }
@@ -50,13 +51,15 @@ M._parse_value = function(key, value)
     return value
 end
 
-M.format = function(options)
-    if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
+M.format = function(options, bufnr)
+    bufnr = bufnr or vim.api.nvim_get_current_buf()
+    local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
+
+    if M.saving_buffers[bufnr] or M.disabled or M.disabled_filetypes[filetype] then
         return
     end
 
-    local bufnr = vim.api.nvim_get_current_buf()
-    local format_options = vim.deepcopy(M.format_options[vim.bo.filetype] or {})
+    local format_options = vim.deepcopy(M.format_options[filetype] or {})
     for key, option in pairs(format_options) do
         if type(option) == "function" then
             format_options[key] = option()
@@ -148,7 +151,9 @@ M.on_attach = function(client)
         group = group,
         desc = "format on save",
         pattern = "<buffer>",
-        callback = M.format,
+        callback = function()
+            M.format({}, bufnr)
+        end,
     })
 end
 
@@ -182,15 +187,15 @@ M._handler = function(err, result, ctx)
 
     vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
     if ctx.bufnr == vim.api.nvim_get_current_buf() then
-        vim.b.format_saving = true
+        M.saving_buffers[ctx.bufnr] = true
         vim.cmd [[update]]
-        vim.b.format_saving = false
+        M.saving_buffers[ctx.bufnr] = nil
     end
     M._next()
 end
 
 M._format = function(bufnr, client, format_options)
-    vim.b.format_changedtick = vim.b.changedtick
+    vim.api.nvim_buf_set_var(bufnr, "format_changedtick", vim.api.nvim_buf_get_var(bufnr, "changedtick"))
     local params = vim.lsp.util.make_formatting_params(format_options)
     local method = "textDocument/formatting"
     local timeout_ms = 2000
