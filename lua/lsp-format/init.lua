@@ -164,6 +164,10 @@ M._handler = function(err, result, ctx)
         M._next()
         return
     end
+    if vim.fn.bufexists(ctx.bufnr) == 0 then
+        M._next()
+        return
+    end
     if not vim.api.nvim_buf_is_loaded(ctx.bufnr) then
         vim.fn.bufload(ctx.bufnr)
         vim.api.nvim_buf_set_var(ctx.bufnr, "format_changedtick", vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick"))
