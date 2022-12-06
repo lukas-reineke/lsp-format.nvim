@@ -1,4 +1,5 @@
 local log = require "vim.lsp.log"
+local lspUtil = require "vim.lsp.util"
 
 local M = {
     format_options = {},
@@ -12,6 +13,7 @@ M.setup = function(format_options)
     M.format_options = vim.tbl_deep_extend("force", M.format_options, format_options or {})
 
     vim.api.nvim_create_user_command("Format", M.format, { nargs = "*", bar = true, force = true })
+    vim.api.nvim_create_user_command("FormatInRange", M.format_in_range, { nargs = "*", bar = true, force = true })
     vim.api.nvim_create_user_command(
         "FormatToggle",
         M.toggle,
@@ -50,11 +52,7 @@ M._parse_value = function(key, value)
     return value
 end
 
-M.format = function(options)
-    if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
-        return
-    end
-
+local function format(clients, options)
     local bufnr = vim.api.nvim_get_current_buf()
     local format_options = vim.deepcopy(M.format_options[vim.bo.filetype] or {})
     for key, option in pairs(format_options) do
@@ -67,7 +65,6 @@ M.format = function(options)
         format_options[key] = M._parse_value(key, value)
     end
 
-    local clients = vim.tbl_values(vim.lsp.buf_get_clients())
     for i = #clients, 1, -1 do
         if
             vim.tbl_contains(format_options.exclude or {}, clients[i].name)
@@ -87,9 +84,33 @@ M.format = function(options)
     end
 
     if #clients > 0 then
-        table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options })
+        table.insert(M.queue, { bufnr = bufnr, clients = clients, format_options = format_options, options = options })
         M._next()
     end
+end
+
+M.format = function(options)
+    if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
+        return
+    end
+
+    local clients= vim.tbl_values(vim.lsp.buf_get_clients())
+    format(clients, options or {})
+end
+
+M.format_in_range = function(options)
+    if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
+        return
+    end
+
+    options = options or {}
+    options.in_range = true
+
+    local clients= vim.tbl_filter(function(client)
+      return client.supports_method "textDocument/rangeFormatting"
+    end, vim.lsp.buf_get_clients())
+
+    format(clients, options)
 end
 
 M.disable = function(options)
@@ -184,7 +205,8 @@ M._handler = function(err, result, ctx)
         return
     end
 
-    vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
+    local client = vim.lsp.get_client_by_id(ctx.client_id)
+    lspUtil.apply_text_edits(result, ctx.bufnr, client.offset_encoding or "utf-16")
     if ctx.bufnr == vim.api.nvim_get_current_buf() then
         vim.b.format_saving = true
         vim.cmd [[update]]
@@ -193,10 +215,19 @@ M._handler = function(err, result, ctx)
     M._next()
 end
 
-M._format = function(bufnr, client, format_options)
+M._format = function(bufnr, client, format_options, options)
     vim.b.format_changedtick = vim.b.changedtick
-    local params = vim.lsp.util.make_formatting_params(format_options)
-    local method = "textDocument/formatting"
+    local method, params
+
+    if options.in_range then
+      method = "textDocument/rangeFormatting"
+      params = lspUtil.make_given_range_params(nil, nil, bufnr, client.offset_encoding or "utf-16")
+      params.options = lspUtil.make_formatting_params(format_options).options
+    else
+      method = "textDocument/formatting"
+      params = lspUtil.make_formatting_params(format_options)
+    end
+
     local timeout_ms = 2000
     if format_options.sync then
         local result = client.request_sync(method, params, timeout_ms, bufnr) or {}
@@ -212,7 +243,7 @@ M._next = function()
         return
     end
     local next_client = table.remove(next.clients, 1)
-    M._format(next.bufnr, next_client, next.format_options)
+    M._format(next.bufnr, next_client, next.format_options, next.options)
     if #next.clients == 0 then
         table.remove(M.queue, 1)
     end
