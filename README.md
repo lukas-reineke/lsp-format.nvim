@@ -91,6 +91,10 @@ formatting.
 
 `force` will write the format result to the buffer, even if the buffer changed after the format request started.
 
+#### `on_save` format option
+
+`on_save` turns on formatting on save. Defaults to `true`. If set `false`, you can invoke `:Format` to format.
+
 ## Notes
 
 #### Make sure you remove any old format on save code
