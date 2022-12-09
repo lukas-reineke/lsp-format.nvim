@@ -131,7 +131,14 @@ M.on_attach = function(client)
         M.buffers[bufnr] = {}
     end
     table.insert(M.buffers[bufnr], client.id)
-    local format_options = M.format_options[vim.bo.filetype] or {}
+
+    local format_options = vim.tbl_deep_extend("keep", M.format_options[vim.bo.filetype] or {}, {
+      on_save = true
+    })
+
+    if not format_options.on_save then
+      return
+    end
 
     local event = "BufWritePost"
     if format_options.sync then
