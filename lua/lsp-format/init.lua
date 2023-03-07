@@ -153,6 +153,19 @@ M.on_attach = function(client)
 end
 
 M._handler = function(err, result, ctx)
+    -- load buffer if not active
+    if not vim.api.nvim_buf_is_loaded(ctx.bufnr) then
+        vim.fn.bufload(ctx.bufnr)
+        vim.api.nvim_buf_set_var(ctx.bufnr, "format_changedtick", vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick"))
+    end
+
+    -- check if buffer was modified
+    local buffer_modified = (
+        vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
+        ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
+    )
+    vim.api.nvim_buf_del_var(ctx.bufnr, "format_changedtick")
+
     if err ~= nil then
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         local client_name = client and client.name or string.format("client_id=%d", ctx.client_id)
@@ -168,18 +181,7 @@ M._handler = function(err, result, ctx)
         M._next()
         return
     end
-    if not vim.api.nvim_buf_is_loaded(ctx.bufnr) then
-        vim.fn.bufload(ctx.bufnr)
-        vim.api.nvim_buf_set_var(ctx.bufnr, "format_changedtick", vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick"))
-    end
-    if
-        not ctx.params.options.force
-        and (
-            vim.api.nvim_buf_get_var(ctx.bufnr, "format_changedtick")
-                ~= vim.api.nvim_buf_get_var(ctx.bufnr, "changedtick")
-            or vim.startswith(vim.api.nvim_get_mode().mode, "i")
-        )
-    then
+    if not ctx.params.options.force and (buffer_modified or vim.startswith(vim.api.nvim_get_mode().mode, "i")) then
         M._next()
         return
     end
@@ -207,6 +209,11 @@ M._format = function(bufnr, client, format_options)
 end
 
 M._next = function()
+    -- if there are format process running, wait for it to finish
+    if vim.b.format_changedtick then
+        return
+    end
+
     local next = M.queue[1]
     if not next or #next.clients == 0 then
         return
