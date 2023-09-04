@@ -4,10 +4,32 @@ local M = {
     format_options = {},
     disabled = false,
     disabled_filetypes = {},
+    saving_buffers = {},
     queue = {},
     buffers = {},
 }
 
+---@param bufnr number
+local get_filetypes = function(bufnr)
+    return vim.split(
+        vim.api.nvim_get_option_value("filetype", { buf = bufnr }),
+        ".",
+        { plain = true, trimempty = true }
+    )
+end
+
+---@param bufnr number
+local filetype_format_options = function(bufnr)
+    local format_options = {}
+    for _, filetype in ipairs(get_filetypes(bufnr)) do
+        if M.format_options[filetype] then
+            format_options = vim.tbl_deep_extend("keep", format_options, M.format_options[filetype])
+        end
+    end
+    return format_options
+end
+
+---@param format_options table
 M.setup = function(format_options)
     M.format_options = vim.tbl_deep_extend("force", M.format_options, format_options or {})
 
@@ -29,7 +51,10 @@ M.setup = function(format_options)
     )
 end
 
-M._parse_value = function(key, value)
+---@param key string
+---@param value string
+---@return boolean|number|string|string[]
+local parse_value = function(key, value)
     if not value then
         return true
     end
@@ -50,13 +75,23 @@ M._parse_value = function(key, value)
     return value
 end
 
+---@param options table
 M.format = function(options)
-    if vim.b.format_saving or M.disabled or M.disabled_filetypes[vim.bo.filetype] then
+    local bufnr = options.buf
+    local format_saving_ok, format_saving = pcall(vim.api.nvim_buf_get_var, bufnr, "format_saving")
+    format_saving = format_saving_ok and format_saving
+
+    if format_saving or M.disabled then
         return
     end
 
-    local bufnr = vim.api.nvim_get_current_buf()
-    local format_options = vim.deepcopy(M.format_options[vim.bo.filetype] or {})
+    for _, filetype in ipairs(get_filetypes(bufnr)) do
+        if M.disabled_filetypes[filetype] then
+            return
+        end
+    end
+    local format_options = filetype_format_options(bufnr)
+
     for key, option in pairs(format_options) do
         if type(option) == "function" then
             format_options[key] = option()
@@ -64,16 +99,17 @@ M.format = function(options)
     end
     for _, option in ipairs(options.fargs or {}) do
         local key, value = unpack(vim.split(option, "="))
-        format_options[key] = M._parse_value(key, value)
+        format_options[key] = parse_value(key, value)
     end
 
-    local clients = vim.tbl_values(vim.lsp.buf_get_clients())
-    for i = #clients, 1, -1 do
+    local clients = {}
+    for _, client in ipairs(vim.lsp.get_clients { bufnr = bufnr }) do
         if
-            vim.tbl_contains(format_options.exclude or {}, clients[i].name)
-            or not vim.tbl_contains(M.buffers[bufnr] or {}, clients[i].id)
+            client
+            and not vim.tbl_contains(format_options.exclude or {}, client.name)
+            and vim.tbl_contains(M.buffers[bufnr] or {}, client.id)
         then
-            table.remove(clients, i)
+            table.insert(clients, client)
         end
     end
 
@@ -92,6 +128,7 @@ M.format = function(options)
     end
 end
 
+---@param options table
 M.disable = function(options)
     if options.args == "" then
         M.disabled = true
@@ -100,6 +137,7 @@ M.disable = function(options)
     end
 end
 
+---@param options table
 M.enable = function(options)
     if options.bang then
         M.disabled_filetypes = {}
@@ -111,6 +149,7 @@ M.enable = function(options)
     end
 end
 
+---@param options table
 M.toggle = function(options)
     if options.args == "" then
         M.disabled = not M.disabled
@@ -119,19 +158,23 @@ M.toggle = function(options)
     end
 end
 
-M.on_attach = function(client)
+---@param client lsp.Client
+---@param bufnr number
+M.on_attach = function(client, bufnr)
     if not client.supports_method "textDocument/formatting" then
         log.warn(
             string.format('"textDocument/formatting" is not supported for %s, not attaching lsp-format', client.name)
         )
         return
     end
-    local bufnr = vim.api.nvim_get_current_buf()
+    if not bufnr then
+        bufnr = vim.api.nvim_get_current_buf()
+    end
     if M.buffers[bufnr] == nil then
         M.buffers[bufnr] = {}
     end
     table.insert(M.buffers[bufnr], client.id)
-    local format_options = M.format_options[vim.bo.filetype] or {}
+    local format_options = filetype_format_options(bufnr)
 
     local event = "BufWritePost"
     if format_options.sync then
@@ -146,13 +189,13 @@ M.on_attach = function(client)
     }
     vim.api.nvim_create_autocmd(event, {
         group = group,
-        desc = "format on save",
-        pattern = "<buffer>",
+        desc = "Format on save",
+        buffer = bufnr,
         callback = M.format,
     })
 end
 
-M._handler = function(err, result, ctx)
+local handler = function(err, result, ctx)
     if err ~= nil then
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         local client_name = client and client.name or string.format("client_id=%d", ctx.client_id)
@@ -186,23 +229,27 @@ M._handler = function(err, result, ctx)
 
     vim.lsp.util.apply_text_edits(result, ctx.bufnr, "utf-16")
     if ctx.bufnr == vim.api.nvim_get_current_buf() then
-        vim.b.format_saving = true
+        M.saving_buffers[ctx.bufnr] = true
         vim.cmd [[update]]
-        vim.b.format_saving = false
+        M.saving_buffers[ctx.bufnr] = nil
     end
     M._next()
 end
 
-M._format = function(bufnr, client, format_options)
-    vim.b.format_changedtick = vim.b.changedtick
+---@param bufnr number
+---@param client lsp.Client
+---@param format_options table
+local format = function(bufnr, client, format_options)
+    vim.api.nvim_buf_set_var(bufnr, "format_changedtick", vim.api.nvim_buf_get_var(bufnr, "changedtick"))
     local params = vim.lsp.util.make_formatting_params(format_options)
     local method = "textDocument/formatting"
     local timeout_ms = 2000
     if format_options.sync then
+        ---@diagnostic disable-next-line
         local result = client.request_sync(method, params, timeout_ms, bufnr) or {}
-        M._handler(result.err, result.result, { client_id = client.id, bufnr = bufnr, params = params })
+        handler(result.err, result.result, { client_id = client.id, bufnr = bufnr, params = params })
     else
-        client.request(method, params, M._handler, bufnr)
+        client.request(method, params, handler, bufnr)
     end
 end
 
@@ -212,7 +259,7 @@ M._next = function()
         return
     end
     local next_client = table.remove(next.clients, 1)
-    M._format(next.bufnr, next_client, next.format_options)
+    format(next.bufnr, next_client, next.format_options)
     if #next.clients == 0 then
         table.remove(M.queue, 1)
     end

@@ -58,8 +58,8 @@ or
 ```lua
 require("lsp-format").setup {}
 
-local on_attach = function(client)
-    require("lsp-format").on_attach(client)
+local on_attach = function(client, bufnr)
+    require("lsp-format").on_attach(client, bufnr)
 
     -- ... custom code ...
 end
