@@ -2,7 +2,6 @@
 
 
 Author: Lukas Reineke <lukas@reineke.jp>
-Version: 2.5.0
 
 ==============================================================================
 CONTENTS                                                          *lsp-format*
