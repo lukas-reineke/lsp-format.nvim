@@ -102,8 +102,13 @@ M.format = function(options)
         format_options[key] = parse_value(key, value)
     end
 
+    local get_clients = vim.lsp.get_clients
+    if not get_clients then
+        get_clients = vim.lsp.get_active_clients
+    end
+
     local clients = {}
-    for _, client in ipairs(vim.lsp.get_clients { bufnr = bufnr }) do
+    for _, client in ipairs(get_clients { bufnr = bufnr }) do
         if
             client
             and not vim.tbl_contains(format_options.exclude or {}, client.name)
