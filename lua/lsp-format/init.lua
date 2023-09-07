@@ -9,6 +9,8 @@ local M = {
     buffers = {},
 }
 
+local method = "textDocument/formatting"
+
 ---@param bufnr number
 local get_filetypes = function(bufnr)
     return vim.split(
@@ -29,7 +31,7 @@ local filetype_format_options = function(bufnr)
     return format_options
 end
 
----@param format_options table
+---@param format_options? table
 M.setup = function(format_options)
     M.format_options = vim.tbl_deep_extend("force", M.format_options, format_options or {})
 
@@ -52,7 +54,7 @@ M.setup = function(format_options)
 end
 
 ---@param key string
----@param value string
+---@param value? string
 ---@return boolean|number|string|string[]
 local parse_value = function(key, value)
     if not value then
@@ -104,6 +106,7 @@ M.format = function(options)
 
     local get_clients = vim.lsp.get_clients
     if not get_clients then
+        ---@diagnostic disable-next-line: deprecated
         get_clients = vim.lsp.get_active_clients
     end
 
@@ -164,11 +167,11 @@ M.toggle = function(options)
 end
 
 ---@param client lsp.Client
----@param bufnr number
+---@param bufnr? number
 M.on_attach = function(client, bufnr)
-    if not client.supports_method "textDocument/formatting" then
+    if not client.supports_method(method) then
         log.warn(
-            string.format('"textDocument/formatting" is not supported for %s, not attaching lsp-format', client.name)
+            string.format('"%s" is not supported for %s, not attaching lsp-format', method, client.name)
         )
         return
     end
@@ -247,7 +250,6 @@ end
 local format = function(bufnr, client, format_options)
     vim.api.nvim_buf_set_var(bufnr, "format_changedtick", vim.api.nvim_buf_get_var(bufnr, "changedtick"))
     local params = vim.lsp.util.make_formatting_params(format_options)
-    local method = "textDocument/formatting"
     local timeout_ms = 2000
     if format_options.sync then
         ---@diagnostic disable-next-line
