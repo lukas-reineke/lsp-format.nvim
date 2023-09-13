@@ -80,10 +80,7 @@ end
 ---@param options table
 M.format = function(options)
     local bufnr = options.buf
-    local format_saving_ok, format_saving = pcall(vim.api.nvim_buf_get_var, bufnr, "format_saving")
-    format_saving = format_saving_ok and format_saving
-
-    if format_saving or M.disabled then
+    if M.saving_buffers[bufnr] or M.disabled then
         return
     end
 
@@ -170,9 +167,7 @@ end
 ---@param bufnr? number
 M.on_attach = function(client, bufnr)
     if not client.supports_method(method) then
-        log.warn(
-            string.format('"%s" is not supported for %s, not attaching lsp-format', method, client.name)
-        )
+        log.warn(string.format('"%s" is not supported for %s, not attaching lsp-format', method, client.name))
         return
     end
     if not bufnr then
