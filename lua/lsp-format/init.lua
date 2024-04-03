@@ -35,8 +35,9 @@ end
 M.setup = function(format_options)
     M.format_options = vim.tbl_deep_extend("force", M.format_options, format_options or {})
 
-    vim.api.nvim_create_user_command("Format", function()
-        M.format { buf = vim.api.nvim_get_current_buf() }
+    vim.api.nvim_create_user_command("Format", function(args)
+        args.buf = vim.api.nvim_get_current_buf()
+        M.format(args)
     end, { nargs = "*", bar = true, force = true })
     vim.api.nvim_create_user_command(
         "FormatToggle",
