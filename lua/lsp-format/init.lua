@@ -4,6 +4,7 @@ local M = {
     format_options = {},
     disabled = false,
     disabled_filetypes = {},
+    disabled_buffers = {},
     saving_buffers = {},
     queue = {},
     buffers = {},
@@ -54,6 +55,27 @@ M.setup = function(format_options)
         M.enable,
         { nargs = "?", bar = true, complete = "filetype", force = true, bang = true }
     )
+    vim.api.nvim_create_user_command(
+        "FormatToggleBuffer",
+        function()
+            M.toggleBuffer { buf = vim.api.nvim_get_current_buf() }
+        end,
+        { nargs = "?", bar = true, complete = "filetype", force = true }
+    )
+    vim.api.nvim_create_user_command(
+        "FormatDisableBuffer",
+        function()
+            M.disableBuffer { buf = vim.api.nvim_get_current_buf() }
+        end,
+        { nargs = "?", bar = true, complete = "filetype", force = true }
+    )
+    vim.api.nvim_create_user_command(
+        "FormatEnableBuffer",
+        function()
+            M.enableBuffer { buf = vim.api.nvim_get_current_buf() }
+        end,
+        { nargs = "?", bar = true, complete = "filetype", force = true, bang = true }
+    )
 end
 
 ---@param key string
@@ -83,7 +105,7 @@ end
 ---@param options table
 M.format = function(options)
     local bufnr = options.buf
-    if M.saving_buffers[bufnr] or M.disabled then
+    if M.saving_buffers[bufnr] or M.disabled_buffers[bufnr] or M.disabled then
         return
     end
 
@@ -164,6 +186,24 @@ M.toggle = function(options)
     else
         M.disabled_filetypes[options.args] = not M.disabled_filetypes[options.args]
     end
+end
+
+---@param options table
+M.disableBuffer = function(options)
+    local bufnr = options.buf
+    M.disabled_buffers[bufnr] = true
+end
+
+---@param options table
+M.enableBuffer = function(options)
+    local bufnr = options.buf
+    M.disabled_buffers[bufnr] = nil
+end
+
+---@param options table
+M.toggleBuffer = function(options)
+    local bufnr = options.buf
+    M.disabled_buffers[bufnr] = not M.disabled_buffers[bufnr]
 end
 
 ---@param client lsp.Client
