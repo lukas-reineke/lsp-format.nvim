@@ -91,6 +91,10 @@ formatting.
 
 `force` will write the format result to the buffer, even if the buffer changed after the format request started.
 
+#### `force_attach` format option
+
+`force_attach` will attach lsp-format to the LSP client even if the latter does not seem to support formatting.
+
 ## Notes
 
 #### Make sure you remove any old format on save code

@@ -7,6 +7,7 @@ local M = {
     saving_buffers = {},
     queue = {},
     buffers = {},
+    force_attach = false,
 }
 
 local method = "textDocument/formatting"
@@ -169,9 +170,15 @@ end
 ---@param client lsp.Client
 ---@param bufnr? number
 M.on_attach = function(client, bufnr)
+    local format_options = filetype_format_options(bufnr)
     if not client.supports_method(method) then
-        log.warn(string.format('"%s" is not supported for %s, not attaching lsp-format', method, client.name))
-        return
+        warn_message = string.format('"%s" is not supported for %s.', method, client.name)
+        if format_options.force_attach then
+            log.warn(warn_message .. ' Attaching lsp-format nonetheless as `force_attach` is enabled.')
+        else
+            log.warn(warn_message .. ' Not attaching lsp-format.')
+            return
+        end
     end
     if not bufnr then
         bufnr = vim.api.nvim_get_current_buf()
@@ -180,7 +187,6 @@ M.on_attach = function(client, bufnr)
         M.buffers[bufnr] = {}
     end
     table.insert(M.buffers[bufnr], client.id)
-    local format_options = filetype_format_options(bufnr)
 
     local event = "BufWritePost"
     if format_options.sync then

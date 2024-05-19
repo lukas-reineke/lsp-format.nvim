@@ -106,6 +106,20 @@ force                                                       *lsp-format-force*
           }
       }
 
+------------------------------------------------------------------------------
+force_attach                                         *lsp-format-force_attach*
+
+  `force_attach` is a boolean flag. When on lsp-format will be attached to the
+  LSP client even if the latter does not seem to support formatting.
+
+  Example: >
+
+      require "lsp-format".setup {
+          typst = {
+              force_attach = true
+          }
+      }
+
 ==============================================================================
  4. COMMANDS                                             *lsp-format-commands*
 
