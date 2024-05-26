@@ -169,10 +169,6 @@ end
 ---@param client lsp.Client
 ---@param bufnr? number
 M.on_attach = function(client, bufnr)
-    if not client.supports_method(method) then
-        log.warn(string.format('"%s" is not supported for %s, not attaching lsp-format', method, client.name))
-        return
-    end
     if not bufnr then
         bufnr = vim.api.nvim_get_current_buf()
     end
@@ -246,6 +242,10 @@ end
 ---@param client lsp.Client
 ---@param format_options table
 local format = function(bufnr, client, format_options)
+    if not client.supports_method(method) then
+        log.warn(string.format('"%s" is not supported for %s, not formatting', method, client.name))
+        return
+    end
     vim.api.nvim_buf_set_var(bufnr, "format_changedtick", vim.api.nvim_buf_get_var(bufnr, "changedtick"))
     local params = vim.lsp.util.make_formatting_params(format_options)
     local timeout_ms = 2000
