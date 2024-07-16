@@ -5,7 +5,7 @@ LSP-format.nvim is a wrapper around Neovims native LSP formatting.
 It does
 
 1. Asynchronous or synchronous formatting on save
-2. Sequential formatting with all attached LSP server
+2. Sequential formatting with all attached LSP servers
 3. Add commands for disabling formatting (globally or per filetype)
 4. Make it easier to send format options to the LSP
 5. Allow you to exclude specific LSP servers from formatting.
