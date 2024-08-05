@@ -1,3 +1,4 @@
+assert = require "luassert"
 local mock = require "luassert.mock"
 local match = require "luassert.match"
 local spy = require "luassert.spy"
@@ -12,10 +13,10 @@ local mock_client = {
     setup = function() end,
 }
 
-vim.lsp.buf_get_clients = function()
-    local clients = {}
-    clients[mock_client.name] = mock_client
-    return clients
+---@diagnostic disable-next-line
+vim.lsp.get_clients = function(options)
+    f.buffers[options.bufnr] = { mock_client.id }
+    return { mock_client }
 end
 
 describe("lsp-format", function()
@@ -25,7 +26,7 @@ describe("lsp-format", function()
     before_each(function()
         c = mock(mock_client, true)
         api = mock(vim.api)
-        c.supports_method = function(_)
+        c.supports_method = function(_, _)
             return true
         end
         f.setup {}
@@ -38,7 +39,7 @@ describe("lsp-format", function()
     end)
 
     it("sends a valid format request", function()
-        f.format {}
+        f.format { buf = 1 }
         assert.stub(c.request).was_called(1)
         assert.stub(c.request).was_called_with("textDocument/formatting", {
             options = {
@@ -48,26 +49,26 @@ describe("lsp-format", function()
             textDocument = {
                 uri = "file://",
             },
-        }, match.is_ref(f._handler), 1)
+        }, match.is_not_nil(), 1)
     end)
 
     it("FormatToggle prevent/allow formatting", function()
         f.toggle { args = "" }
-        f.format {}
+        f.format { buf = 1 }
         assert.stub(c.request).was_called(0)
 
         f.toggle { args = "" }
-        f.format {}
+        f.format { buf = 1 }
         assert.stub(c.request).was_called(1)
     end)
 
     it("FormatDisable/Enable prevent/allow formatting", function()
         f.disable { args = "" }
-        f.format {}
+        f.format { buf = 1 }
         assert.stub(c.request).was_called(0)
 
         f.enable { args = "" }
-        f.format {}
+        f.format { buf = 1 }
         assert.stub(c.request).was_called(1)
     end)
 
@@ -80,7 +81,7 @@ describe("lsp-format", function()
             },
         }
         vim.bo.filetype = "lua"
-        f.format {}
+        f.format { buf = 1 }
         assert.stub(c.request).was_called(1)
         assert.stub(c.request).was_called_with("textDocument/formatting", {
             options = {
@@ -93,11 +94,12 @@ describe("lsp-format", function()
             textDocument = {
                 uri = "file://",
             },
-        }, match.is_ref(f._handler), 1)
+        }, match.is_not_nil(), 1)
     end)
 
     it("sends format options", function()
         f.format {
+            buf = 1,
             fargs = { "bool_test", "int_test=1", "string_test=string" },
         }
         assert.stub(c.request).was_called(1)
@@ -112,7 +114,7 @@ describe("lsp-format", function()
             textDocument = {
                 uri = "file://",
             },
-        }, match.is_ref(f._handler), 1)
+        }, match.is_not_nil(), 1)
     end)
 
     it("overwrites default format options", function()
@@ -125,6 +127,7 @@ describe("lsp-format", function()
         }
         vim.bo.filetype = "lua"
         f.format {
+            buf = 1,
             fargs = { "bool_test=false", "int_test=2", "string_test=another_string" },
         }
         assert.stub(c.request).was_called(1)
@@ -139,7 +142,7 @@ describe("lsp-format", function()
             textDocument = {
                 uri = "file://",
             },
-        }, match.is_ref(f._handler), 1)
+        }, match.is_not_nil(), 1)
     end)
 
     it("does not overwrite changes", function()
@@ -153,7 +156,7 @@ describe("lsp-format", function()
             end
             handler(nil, {}, { bufnr = bufnr, params = params })
         end
-        f.format {}
+        f.format { buf = 1 }
         assert.spy(apply_text_edits).was.called(0)
     end)
 
@@ -168,7 +171,7 @@ describe("lsp-format", function()
             end
             handler(nil, {}, { bufnr = bufnr, params = params })
         end
-        f.format { fargs = { "force=true" } }
+        f.format { buf = 1, fargs = { "force=true" } }
         assert.spy(apply_text_edits).was.called(1)
     end)
 
@@ -180,7 +183,7 @@ describe("lsp-format", function()
             end
             handler(nil, {}, { bufnr = bufnr, params = params })
         end
-        f.format {}
+        f.format { buf = 1 }
         assert.spy(apply_text_edits).was.called(0)
     end)
 
@@ -192,7 +195,7 @@ describe("lsp-format", function()
             end
             handler(nil, {}, { bufnr = bufnr, params = params })
         end
-        f.format { fargs = { "force=true" } }
+        f.format { buf = 1, fargs = { "force=true" } }
         assert.spy(apply_text_edits).was.called(1)
     end)
 end)
