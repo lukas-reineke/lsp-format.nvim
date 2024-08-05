@@ -1,61 +1,81 @@
-name: Pull request check
+name: Pull Request Check
 
 on:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  format:
-    runs-on: ubuntu-latest
+  tests:
+    uses: ./.github/workflows/tests.yml
+    with:
+      neovim_versions: |
+        [ "nightly", "v0.10.0" ]
+
+  lua-language-server:
+    uses: ./.github/workflows/lua_language_server.yml
+    with:
+      lua_ls_version: 3.9.1
+      neovim_versions: |
+        [ "nightly", "v0.10.0" ]
+
+  stylua:
+    name: stylua
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: JohnnyMorganz/stylua-action@1.0.0
+      - uses: actions/checkout@v3
+      - uses: JohnnyMorganz/stylua-action@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --check .
+          version: latest
+          args: --color always --check .
+
+  luacheck:
+    name: luacheck
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Prepare
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luarocks
+          sudo luarocks install luacheck
+
+      - name: Lint
+        run: sudo make luacheck
 
   block-fixup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v2
       - name: Block Fixup Commit Merge
         uses: 13rac1/block-fixup-merge-action@v2.0.0
 
-  luacheck:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@master
-
-      - uses: leafo/gh-actions-lua@v8.0.0
-        with:
-          luaVersion: 'luajit-2.1.0-beta3'
-
-      - uses: leafo/gh-actions-luarocks@v4.0.0
-
-      - name: build
-        run: |
-          luarocks install luacheck
-
-      - name: test
-        run: |
-          luacheck lua specs
-
-  tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        version:
-          - stable
-          - nightly
+  conventional-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Neovim
-        uses: rhysd/action-setup-vim@v1
-        id: neovim
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
-          neovim: true
-          version: ${{ matrix.version }}
-      - name: Run tests
-        run: make specs
+          fetch-depth: 0
+
+      - name: Check Commit Messages
+        run: |
+          commits=$(git log --no-merges --pretty=format:"%s" HEAD~${{ github.event.pull_request.commits }}..HEAD)
+          bad_commits=()
+          for commit in "$commits"; do
+            if ! echo $commit | grep -qE "^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(.+\))?: .+"; then
+              bad_commits+=("$commit")
+            fi
+          done
+          if [[ ${#bad_commits[@]} -ne 0 ]]; then
+            echo "The following commits do not follow the Conventional Commit format:"
+            for bad_commit in "${bad_commits[@]}"; do
+              echo "  - $bad_commit"
+            done
+            exit 1
+          fi
