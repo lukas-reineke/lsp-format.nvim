@@ -166,7 +166,7 @@ M.toggle = function(options)
     end
 end
 
----@param client lsp.Client
+---@param client vim.lsp.Client
 ---@param bufnr? number
 M.on_attach = function(client, bufnr)
     if not bufnr then
@@ -239,10 +239,10 @@ local handler = function(err, result, ctx)
 end
 
 ---@param bufnr number
----@param client lsp.Client
+---@param client vim.lsp.Client
 ---@param format_options table
 local format = function(bufnr, client, format_options)
-    if not client.supports_method(method) then
+    if not client.supports_method(method, { bufnr = bufnr }) then
         log.warn(string.format('"%s" is not supported for %s, not formatting', method, client.name))
         return
     end
