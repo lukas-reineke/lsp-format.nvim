@@ -80,6 +80,21 @@ local parse_value = function(key, value)
     return value
 end
 
+---@param bufnr number
+---@param options lsp.FormattingOptions
+---@return lsp.DocumentFormattingParams
+local function make_formatting_params(bufnr, options)
+    local tabSize = vim.api.nvim_get_option_value("shiftwidth", { buf = bufnr })
+    local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = bufnr })
+    if expandtab or tabSize == 0 then
+        tabSize = vim.api.nvim_get_option_value("tabstop", { buf = bufnr })
+    end
+    return {
+        textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+        options = vim.tbl_extend("keep", options, { tabSize = tabSize, insertSpaces = expandtab }),
+    }
+end
+
 ---@param options table
 M.format = function(options)
     local bufnr = options.buf
@@ -247,7 +262,7 @@ local format = function(bufnr, client, format_options)
         return
     end
     vim.api.nvim_buf_set_var(bufnr, "format_changedtick", vim.api.nvim_buf_get_var(bufnr, "changedtick"))
-    local params = vim.lsp.util.make_formatting_params(format_options)
+    local params = make_formatting_params(bufnr, format_options)
     local timeout_ms = 2000
     if format_options.sync then
         ---@diagnostic disable-next-line
