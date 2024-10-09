@@ -84,11 +84,8 @@ end
 ---@param options lsp.FormattingOptions
 ---@return lsp.DocumentFormattingParams
 local function make_formatting_params(bufnr, options)
-    local tabSize = vim.api.nvim_get_option_value("shiftwidth", { buf = bufnr })
+    local tabSize = vim.lsp.util.get_effective_tabstop(bufnr)
     local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = bufnr })
-    if expandtab or tabSize == 0 then
-        tabSize = vim.api.nvim_get_option_value("tabstop", { buf = bufnr })
-    end
     return {
         textDocument = { uri = vim.uri_from_bufnr(bufnr) },
         options = vim.tbl_extend("keep", options, { tabSize = tabSize, insertSpaces = expandtab }),
