@@ -32,8 +32,17 @@ It does not
 ==============================================================================
  2. SETUP                                                   *lsp-format-setup*
 
-To use LSP-format, you have to run the setup function, and pass the `on_attach`
-function to each LSP that should use it.
+To use LSP-format, you have to run the setup function, and register a
+`LspAttach` autocmd: >
+
+    require("lsp-format").setup {}
+
+    vim.api.nvim_create_autocmd('LspAttach', {
+      callback = function(args)
+        local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
+        require("lsp-format").on_attach(client, args.buf)
+      end,
+    })
 
 The setup functions takes one optional argument that maps |filetypes| to
 format options.
