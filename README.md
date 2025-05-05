@@ -46,24 +46,17 @@ call plug#end()
 
 ## Setup
 
-To use LSP-format, you have to run the setup function, and pass the `on_attach` function to each LSP that should use it.
-
-```lua
-require("lsp-format").setup {}
-require("lspconfig").gopls.setup { on_attach = require("lsp-format").on_attach }
-```
-
-or
+To use LSP-format, you have to run the setup function, and register a `LspAttach` autocmd:
 
 ```lua
 require("lsp-format").setup {}
 
-local on_attach = function(client, bufnr)
-    require("lsp-format").on_attach(client, bufnr)
-
-    -- ... custom code ...
-end
-require("lspconfig").gopls.setup { on_attach = on_attach }
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(args)
+    local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
+    require("lsp-format").on_attach(client, args.buf)
+  end,
+})
 ```
 
 That's it, saving a buffer will format it now.
