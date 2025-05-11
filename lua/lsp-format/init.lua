@@ -254,7 +254,7 @@ end
 ---@param client vim.lsp.Client
 ---@param format_options table
 local format = function(bufnr, client, format_options)
-    if not client.supports_method(method, { bufnr = bufnr }) then
+    if not client:supports_method(method, { bufnr = bufnr }) then
         log.warn(string.format('"%s" is not supported for %s, not formatting', method, client.name))
         return
     end
@@ -263,10 +263,10 @@ local format = function(bufnr, client, format_options)
     local timeout_ms = 2000
     if format_options.sync then
         ---@diagnostic disable-next-line
-        local result = client.request_sync(method, params, timeout_ms, bufnr) or {}
+        local result = client:request_sync(method, params, timeout_ms, bufnr) or {}
         handler(result.err, result.result, { client_id = client.id, bufnr = bufnr, params = params })
     else
-        client.request(method, params, handler, bufnr)
+        client:request(method, params, handler, bufnr)
     end
 end
 
