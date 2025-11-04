@@ -63,7 +63,7 @@ local parse_value = function(key, value)
     if not value then
         return true
     end
-    if key == "order" or key == "exclude" then
+    if key == "order" or key == "exclude" or key == "only" then
         return vim.split(value, ",")
     end
     local int_value = tonumber(value)
@@ -123,13 +123,25 @@ M.format = function(options)
     end
 
     local clients = {}
-    for _, client in ipairs(get_clients { bufnr = bufnr }) do
-        if
-            client
-            and not vim.tbl_contains(format_options.exclude or {}, client.name)
-            and vim.tbl_contains(M.buffers[bufnr] or {}, client.id)
-        then
-            table.insert(clients, client)
+    if #(format_options.only or {}) > 0 then
+        for _, client in ipairs(get_clients { bufnr = bufnr }) do
+            if
+                client
+                and vim.tbl_contains(format_options.only, client.name)
+                and vim.tbl_contains(M.buffers[bufnr] or {}, client.id)
+            then
+                table.insert(clients, client)
+            end
+        end
+    else
+        for _, client in ipairs(get_clients { bufnr = bufnr }) do
+            if
+                client
+                and not vim.tbl_contains(format_options.exclude or {}, client.name)
+                and vim.tbl_contains(M.buffers[bufnr] or {}, client.id)
+            then
+                table.insert(clients, client)
+            end
         end
     end
 

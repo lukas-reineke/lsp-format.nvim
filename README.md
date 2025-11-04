@@ -72,6 +72,10 @@ There are a couple special format options that LSP-format uses.
 Alternatively, you can also just not call `on_attach` for the clients you don't want to use for
 formatting.
 
+#### `only` format option
+
+`only` is a table of the only LSP servers that should format the buffer.
+
 #### `order` format option
 
 `order` is a table that determines the order formatting is requested from the LSP server.

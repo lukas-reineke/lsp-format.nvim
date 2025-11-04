@@ -72,6 +72,20 @@ exclude                                                   *lsp-format-exclude*
 
 
 ------------------------------------------------------------------------------
+only                                                      *lsp-format-only*
+
+  `only` is a table of client names to limit formatting to.
+
+  Example: >
+
+      require "lsp-format".setup {
+          go = {
+              only = { "gopls" }
+          },
+      }
+
+
+------------------------------------------------------------------------------
 order                                                       *lsp-format-order*
 
   `order` is a table of client names. Formatting is requested from clients in
