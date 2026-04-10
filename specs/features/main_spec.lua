@@ -9,7 +9,7 @@ local mock_client = {
     name = "lsp-client-test",
     request = function(_, _, _, _) end,
     request_sync = function(_, _, _, _) end,
-    supports_method = function(_) end,
+    supports_method = function(_, _) end,
     setup = function() end,
 }
 
@@ -26,7 +26,7 @@ describe("lsp-format", function()
     before_each(function()
         c = mock(mock_client, true)
         api = mock(vim.api)
-        c.supports_method = function(_, _)
+        c.supports_method = function(_, _, _)
             return true
         end
         f.setup {}
